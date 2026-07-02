@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineSearch - Modern Movie Discovery</title>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css?v=10">
+</head>
+<body>
+  <!-- Ambient background glows -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- API Key Setup Overlay -->
+  <div id="api-key-overlay" class="overlay hidden">
+    <div class="glass-card api-card">
+      <div class="api-header">
+        <div class="icon-wrapper">
+          <i data-lucide="key-round" class="accent-color"></i>
+        </div>
+        <h2>Configure TMDb API Access</h2>
+        <p>This application queries The Movie Database (TMDb) directly from your browser. Your API key is stored securely in your browser's local storage.</p>
+      </div>
+      <form id="api-key-form">
+        <div class="input-group">
+          <label for="api-key-input">TMDb API Key (v3)</label>
+          <div class="input-with-icon">
+            <i data-lucide="lock"></i>
+            <input type="password" id="api-key-input" placeholder="e.g. 8f1b...52cb" required autocomplete="off">
+          </div>
+        </div>
+        <div class="api-help">
+          <p>Don't have a key? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">Get a TMDb API Key <i data-lucide="external-link" class="small-icon"></i></a> (It's free!)</p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          <span>Save API Key</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Application Wrapper -->
+  <div class="app-container">
+    <header class="app-header glass-card">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <i data-lucide="film"></i>
+        </div>
+        <div>
+          <h1>Cinema Search</h1>
+          <p class="tagline">The smartest way to search, filter, and discover your next favorite movie</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="btn header-control" title="Toggle Theme">
+          <i data-lucide="sun" id="theme-icon"></i>
+        </button>
+        <button id="change-key-btn" class="btn header-control" title="Change API Key">
+          <i data-lucide="settings"></i>
+        </button>
+        <button id="shutdown-btn" class="btn header-control shutdown-control" title="Shutdown Server & Close App">
+          <i data-lucide="power"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Search Dashboard Panel -->
+      <section class="search-panel glass-card">
+        <div class="panel-header">
+          <i data-lucide="sliders-horizontal" class="panel-icon"></i>
+          <h2>Search Criteria</h2>
+        </div>
+        
+        <form id="search-form">
+          <!-- Movie Title Input -->
+          <div class="input-group">
+            <label for="title-input">Movie Title / Keyword</label>
+            <div class="input-with-icon has-inline-clear">
+              <i data-lucide="search"></i>
+              <input type="text" id="title-input" placeholder="e.g. Inception, Gladiator, Ocean..." autocomplete="off">
+              <button type="button" id="title-clear-btn" class="input-clear-btn hidden" aria-label="Clear movie title">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Person Fields: Actor & Actress -->
+          <div class="form-row flex-row">
+            <!-- Actor Suggest Input -->
+            <div class="input-group search-person-group">
+              <label for="actor-input">Actor</label>
+              
+              <!-- Input field (visible by default) -->
+              <div id="actor-input-wrapper" class="input-with-icon has-inline-clear">
+                <i data-lucide="user"></i>
+                <input type="text" id="actor-input" placeholder="e.g. Brad Pitt, Tom Hanks..." autocomplete="off">
+                <button type="button" id="actor-clear-btn" class="input-clear-btn hidden" aria-label="Clear actor">
+                  <i data-lucide="x"></i>
+                </button>
+                <div class="spinner hidden" id="actor-spinner"></div>
+              </div>
+
+              <!-- Selected Chip (hidden by default) -->
+              <div id="actor-chip" class="selected-person-chip hidden">
+                <img id="actor-chip-img" src="" alt="" class="chip-avatar">
+                <span id="actor-chip-name" class="chip-name">Brad Pitt</span>
+                <button type="button" id="remove-actor-btn" class="chip-remove">
+                  <i data-lucide="x"></i>
+                </button>
+              </div>
+
+              <!-- Autocomplete suggestions dropdown -->
+              <div id="actor-suggestions" class="suggestions-list hidden"></div>
+            </div>
+
+            <!-- Actress Suggest Input -->
+            <div class="input-group search-person-group">
+              <label for="actress-input">Actress</label>
+              
+              <!-- Input field (visible by default) -->
+              <div id="actress-input-wrapper" class="input-with-icon has-inline-clear">
+                <i data-lucide="user"></i>
+                <input type="text" id="actress-input" placeholder="e.g. Meryl Streep, Scarlett Johansson..." autocomplete="off">
+                <button type="button" id="actress-clear-btn" class="input-clear-btn hidden" aria-label="Clear actress">
+                  <i data-lucide="x"></i>
+                </button>
+                <div class="spinner hidden" id="actress-spinner"></div>
+              </div>
+
+              <!-- Selected Chip (hidden by default) -->
+              <div id="actress-chip" class="selected-person-chip hidden">
+                <img id="actress-chip-img" src="" alt="" class="chip-avatar">
+                <span id="actress-chip-name" class="chip-name">Meryl Streep</span>
+                <button type="button" id="remove-actress-btn" class="chip-remove">
+                  <i data-lucide="x"></i>
+                </button>
+              </div>
+
+              <!-- Autocomplete suggestions dropdown -->
+              <div id="actress-suggestions" class="suggestions-list hidden"></div>
+            </div>
+          </div>
+
+          <!-- Metadata Fields: Year, Language & Genre -->
+          <div class="form-row flex-row">
+            <div class="input-group size-small">
+              <label for="year-input">Release Year</label>
+              <div class="input-with-icon">
+                <i data-lucide="calendar"></i>
+                <input type="number" id="year-input" min="1900" max="2030" placeholder="Any Year">
+              </div>
+            </div>
+
+            <div class="input-group size-large">
+              <label for="language-select">Language</label>
+              <div class="input-with-icon select-wrapper">
+                <i data-lucide="languages"></i>
+                <select id="language-select">
+                  <option value="">Any Language</option>
+                  <option value="en">English</option>
+                  <option value="es">Spanish (Español)</option>
+                  <option value="fr">French (Français)</option>
+                  <option value="ja">Japanese (日本語)</option>
+                  <option value="ko">Korean (한국어)</option>
+                  <option value="hi">Hindi (हिन्दी)</option>
+                  <option value="bn">Bengali (বাংলা)</option>
+                  <option value="zh">Chinese (中文)</option>
+                  <option value="de">German (Deutsch)</option>
+                  <option value="it">Italian (Italiano)</option>
+                  <option value="pt">Portuguese (Português)</option>
+                  <option value="ru">Russian (Русский)</option>
+                  <option value="sv">Swedish (Svenska)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="input-group size-large">
+              <label for="genre-select">Movie Genre</label>
+              <div class="input-with-icon select-wrapper">
+                <i data-lucide="clapperboard"></i>
+                <select id="genre-select">
+                  <option value="">Any Genre</option>
+                  <option value="28">Action</option>
+                  <option value="12">Adventure</option>
+                  <option value="16">Animation</option>
+                  <option value="35">Comedy</option>
+                  <option value="80">Crime</option>
+                  <option value="99">Documentary</option>
+                  <option value="18">Drama</option>
+                  <option value="10751">Family</option>
+                  <option value="14">Fantasy</option>
+                  <option value="36">History</option>
+                  <option value="27">Horror</option>
+                  <option value="10402">Music</option>
+                  <option value="9648">Mystery</option>
+                  <option value="10749">Romance</option>
+                  <option value="878">Sci-Fi</option>
+                  <option value="53,9648">Suspense</option>
+                  <option value="53">Thriller</option>
+                  <option value="10752">War</option>
+                  <option value="37">Western</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- OTT Streaming Filter -->
+          <div class="input-group checkbox-group">
+            <label class="checkbox-label" for="ott-only-checkbox">
+              <input type="checkbox" id="ott-only-checkbox">
+              <span class="custom-checkbox"></span>
+              <span class="label-text">Only show movies available to stream on OTTs</span>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="clear-btn" class="btn btn-primary">
+              <i data-lucide="rotate-ccw"></i>
+              <span>Reset Filters</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Results Section -->
+      <section class="results-panel">
+        <div class="results-toolbar">
+          <div class="results-count">
+            <span id="results-count-text">Ready for discovery</span>
+          </div>
+          
+          <div class="sort-selector glass-card hidden" id="sort-toolbar">
+            <span class="sort-label">Sort by:</span>
+            <div class="sort-options">
+              <button class="sort-opt active" data-sort="vote_average.desc">
+                <i data-lucide="star"></i>
+                <span>Ranking</span>
+              </button>
+              <button class="sort-opt" data-sort="popularity.desc">
+                <i data-lucide="trending-up"></i>
+                <span>Popularity</span>
+              </button>
+              <button class="sort-opt" data-sort="primary_release_date.desc">
+                <i data-lucide="calendar-days"></i>
+                <span>Release Date</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shimmer Loader -->
+        <div id="loader" class="loader-grid hidden">
+          <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
+          <div class="shimmer-card"></div>
+        </div>
+
+        <!-- Dynamic Results Grid -->
+        <div id="movies-grid" class="movies-grid">
+          <!-- Empty State by default -->
+          <div class="empty-state glass-card" id="empty-state">
+            <div class="empty-icon">
+              <i data-lucide="popcorn"></i>
+            </div>
+            <h3>Discover Cinematic Masterpieces</h3>
+            <p>Fill out any of the criteria above to start searching. For the best results, select both an actor and actress to find their collaborative work!</p>
+        </div>
+      </div>
+
+      <!-- Pagination Controls -->
+        <div id="pagination-container" class="pagination-container hidden">
+          <button id="load-more-btn" class="btn btn-secondary">
+            <span>Load More Movies</span>
+            <i data-lucide="chevron-down"></i>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Detail Dialog Modal -->
+  <dialog id="movie-detail-dialog" class="detail-dialog glass-card">
+    <div class="dialog-wrapper">
+      <button id="close-dialog-btn" class="dialog-close-btn" aria-label="Close dialog">
+        <i data-lucide="x"></i>
+      </button>
+      
+      <div class="dialog-backdrop-img" id="dialog-backdrop"></div>
+      
+      <div class="dialog-content">
+        <div class="dialog-poster-wrapper">
+          <img id="dialog-poster" src="" alt="Movie Poster" class="dialog-poster">
+        </div>
+        
+        <div class="dialog-info">
+          <div class="dialog-header">
+            <h2 id="dialog-title">Movie Title</h2>
+            <div class="dialog-meta-container">
+              <div class="dialog-meta">
+                <span id="dialog-year" class="meta-tag">2026</span>
+                <span id="dialog-lang" class="meta-tag">EN</span>
+                <span id="dialog-runtime" class="meta-tag hidden">-- min</span>
+                <span id="dialog-type" class="meta-tag hidden">Movie</span>
+                <span id="dialog-rating" class="rating-tag">
+                  <i data-lucide="star" class="fill-gold"></i>
+                  <span id="dialog-rating-val">8.2</span>
+                </span>
+              </div>
+              <a id="google-search-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn-google-search">
+                <i data-lucide="search"></i>
+                <span>Search with Google</span>
+              </a>
+            </div>
+          </div>
+          
+          <div class="dialog-body">
+            <div id="dialog-genres-container" class="dialog-genres"></div>
+            <h3>Overview</h3>
+            <p id="dialog-overview">Movie overview text...</p>
+            
+            <div class="dialog-details-grid">
+              <div>
+                <h4>Popularity Score</h4>
+                <p id="dialog-popularity">120.5</p>
+              </div>
+              <div>
+                <h4>Total Vote Count</h4>
+                <p id="dialog-votes">1,240 votes</p>
+              </div>
+            </div>
+            
+            <div class="dialog-providers-section">
+              <h3>Where to Stream</h3>
+              <div id="dialog-providers-container" class="providers-container">
+                <span class="text-muted">Loading platforms...</span>
+              </div>
+            </div>
+            <div class="dialog-providers-section" id="dialog-rent-section" style="display:none;">
+              <h3>Rent / Buy</h3>
+              <div id="dialog-rent-container" class="providers-container"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Shutdown Confirmation Overlay -->
+  <div id="shutdown-overlay" class="api-key-overlay hidden">
+    <div class="api-key-card glass-card text-center" style="max-width: 450px; text-align: center; padding: 2.5rem; margin: auto;">
+      <div class="api-header" style="align-items: center; justify-content: center;">
+        <div class="icon-wrapper" style="background: rgba(239, 68, 68, 0.15); color: var(--red); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+          <i data-lucide="power" style="width: 30px; height: 30px;"></i>
+        </div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; color: var(--text-primary);">Application Stopped</h2>
+        <p style="margin-top: 1rem; color: var(--text-muted); line-height: 1.5;">The local web server has been shut down successfully.</p>
+        <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">You can now safely close this browser window or tab.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script initialization -->
+  <script src="app.js?v=5"></script>
+</body>
+</html>

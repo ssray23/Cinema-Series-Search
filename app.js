@@ -706,7 +706,7 @@ async function discoverMovies() {
     }
 
     // Manage load-more visibility
-    if (currentPage < totalPages) {
+    if (activeSearchResults.length > 0 && currentPage < totalPages) {
       paginationContainer.classList.remove('hidden');
     } else {
       paginationContainer.classList.add('hidden');
@@ -1440,7 +1440,14 @@ function setupEventListeners() {
     
     // Reset output
     moviesGrid.innerHTML = '';
+    moviesGrid.classList.add('hidden');
     emptyState.classList.remove('hidden');
+    
+    // Reset sort state to default (Ranking)
+    currentSort = 'vote_average.desc';
+    sortOpts.forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.sort === 'vote_average.desc');
+    });
     
     // Update empty state icon & text for current mode
     const emptyIcon = document.getElementById('empty-state-icon');

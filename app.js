@@ -10,6 +10,51 @@ const POSTER_SIZE = 'w342';
 const BACKDROP_SIZE = 'w780';
 
 /// --- State Management ---
+let currentMode = 'movie';
+
+const MOVIE_GENRES = `
+  <option value="">Any Genre</option>
+  <option value="28">Action</option>
+  <option value="12">Adventure</option>
+  <option value="16">Animation</option>
+  <option value="35">Comedy</option>
+  <option value="80">Crime</option>
+  <option value="99">Documentary</option>
+  <option value="18">Drama</option>
+  <option value="10751">Family</option>
+  <option value="14">Fantasy</option>
+  <option value="36">History</option>
+  <option value="27">Horror</option>
+  <option value="10402">Music</option>
+  <option value="9648">Mystery</option>
+  <option value="10749">Romance</option>
+  <option value="878">Sci-Fi</option>
+  <option value="53,9648">Suspense</option>
+  <option value="53">Thriller</option>
+  <option value="10752">War</option>
+  <option value="37">Western</option>
+`;
+
+const TV_GENRES = `
+  <option value="">Any Genre</option>
+  <option value="10759">Action & Adventure</option>
+  <option value="16">Animation</option>
+  <option value="35">Comedy</option>
+  <option value="80">Crime</option>
+  <option value="99">Documentary</option>
+  <option value="18">Drama</option>
+  <option value="10751">Family</option>
+  <option value="10762">Kids</option>
+  <option value="9648">Mystery</option>
+  <option value="10763">News</option>
+  <option value="10764">Reality</option>
+  <option value="10765">Sci-Fi & Fantasy</option>
+  <option value="10766">Soap</option>
+  <option value="10767">Talk</option>
+  <option value="10768">War & Politics</option>
+  <option value="37">Western</option>
+`;
+
 let tmdbApiKey = localStorage.getItem('tmdb_api_key') || 'b90551ebe60ebd6e1c86724efd295ee0';
 let selectedActorId = null;
 let selectedActressId = null;
@@ -82,6 +127,7 @@ const dialogPoster = document.getElementById('dialog-poster');
 const dialogTitle = document.getElementById('dialog-title');
 const dialogYear = document.getElementById('dialog-year');
 const dialogLang = document.getElementById('dialog-lang');
+const dialogSeasons = document.getElementById('dialog-seasons');
 const dialogRatingVal = document.getElementById('dialog-rating-val');
 const dialogOverview = document.getElementById('dialog-overview');
 const dialogPopularity = document.getElementById('dialog-popularity');
@@ -319,11 +365,29 @@ function getTitleMatchScore(title, query) {
  */
 function checkHasStreamProviders(movieData) {
   const watchData = movieData['watch/providers']?.results;
-  if (!watchData) return false;
-
-  for (const loc of Object.keys(watchData)) {
-    if (watchData[loc]?.flatrate?.length > 0) return true;
+  if (watchData) {
+    for (const loc of Object.keys(watchData)) {
+      if (watchData[loc]?.flatrate?.length > 0) return true;
+    }
   }
+  
+  // Fallback: Check Networks and Production Companies for known OTTs
+  const knownOttKeywords = [
+    'netflix', 'amazon', 'prime video', 'hoichoi', 'zee5', 'hotstar', 'disney+', 'hulu', 
+    'apple tv', 'apple tv+', 'sony liv', 'jiocinema', 'peacock', 'paramount+', 'max', 'hbo',
+    'chorki', 'bioscope', 'addatimes', 'klikk', 'bongo', 'bongobd', 'svf', 'eskay', 'surinder'
+  ];
+  
+  const networks = movieData.networks || [];
+  for (const n of networks) {
+    if (n.name && knownOttKeywords.some(ott => n.name.toLowerCase().includes(ott))) return true;
+  }
+  
+  const companies = movieData.production_companies || [];
+  for (const c of companies) {
+    if (c.name && knownOttKeywords.some(ott => c.name.toLowerCase().includes(ott))) return true;
+  }
+
   return false;
 }
 
@@ -332,8 +396,14 @@ function checkHasStreamProviders(movieData) {
  * Used as watch_region for TMDb OTT filtering so results are regionally accurate.
  * Falls back to 'US' if the timezone is unrecognised.
  */
-function detectWatchRegion() {
+function detectWatchRegion(lang) {
   try {
+    // If an Indian language is selected, force region to IN (India) for vastly superior OTT provider data coverage
+    const indianLanguages = ['hi', 'bn', 'ta', 'te', 'ml', 'mr', 'kn', 'gu', 'pa'];
+    if (lang && indianLanguages.includes(lang)) {
+      return 'IN';
+    }
+    
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
     const tzMap = {
       'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN',
@@ -372,6 +442,57 @@ function detectWatchRegion() {
 }
 
 /**
+ * Weighted rating for the "Ranking" sort: dampens vote_average for titles that
+ * haven't crossed a minimum vote-count confidence threshold, instead of hiding
+ * them outright. A brand-new or regional show with 2 votes and a 9.0 average no
+ * longer either (a) gets server-side excluded, or (b) unfairly outranks a show
+ * with 5,000 votes and an 8.0 average - it settles somewhere honest in between.
+ */
+function weightedRating(item) {
+  const voteCount = item.vote_count || 0;
+  const voteAverage = item.vote_average || 0;
+  const minVotes = currentMode === 'tv' ? 5 : 50;
+  if (voteCount >= minVotes) return voteAverage;
+  return voteAverage * (voteCount / minVotes);
+}
+
+/**
+ * Comparator for the currently active sort mode (Ranking / Popularity / Release Date).
+ */
+function compareBySort(a, b) {
+  if (currentSort === 'vote_average.desc') {
+    return weightedRating(b) - weightedRating(a);
+  } else if (currentSort === 'popularity.desc') {
+    return (b.popularity || 0) - (a.popularity || 0);
+  } else if (currentSort === 'primary_release_date.desc') {
+    return new Date(b.release_date || b.first_air_date || 0) - new Date(a.release_date || a.first_air_date || 0);
+  }
+  return (b.popularity || 0) - (a.popularity || 0);
+}
+
+/**
+ * Sort activeSearchResults in place: title-match relevance first (when a title
+ * query is active), then the user's chosen sort mode as a tiebreaker/primary key.
+ * FIX (Bug #3): this is called both after a fetch AND directly from the sort-button
+ * click handler (no refetch) - see setupEventListeners - so switching sort modes
+ * re-orders the exact same set of cards instead of pulling a new, differently-sized
+ * pool from TMDb.
+ */
+function sortActiveResults() {
+  const titleQuery = titleInput ? titleInput.value.trim() : '';
+  if (titleQuery) {
+    activeSearchResults.sort((a, b) => {
+      const scoreA = Math.max(getTitleMatchScore(a.title || a.name, titleQuery), getTitleMatchScore(a.original_title || a.original_name, titleQuery));
+      const scoreB = Math.max(getTitleMatchScore(b.title || b.name, titleQuery), getTitleMatchScore(b.original_title || b.original_name, titleQuery));
+      if (scoreA !== scoreB) return scoreB - scoreA; // Highest match tier first
+      return compareBySort(a, b);
+    });
+  } else {
+    activeSearchResults.sort(compareBySort);
+  }
+}
+
+/**
  * Discover movies using combinations of active filters (Live API & Fuzzy Search)
  */
 async function discoverMovies() {
@@ -398,7 +519,7 @@ async function discoverMovies() {
   const castQuery = withCast.length > 0 ? withCast.join(',') : null;
 
   // Build query configuration
-  let endpoint = 'discover/movie';
+  let endpoint = `discover/${currentMode}`;
   const params = {
     include_adult: false,
     include_video: false,
@@ -406,141 +527,182 @@ async function discoverMovies() {
     language: 'en-US'
   };
 
-  // If sorting is by popularity or release date, pass to TMDb.
-  // Note: search/movie doesn't support sort_by parameter natively, so we handle it client-side.
+  // If sorting is by popularity or release date, pass to TMDb discover.
+  // Note: search/movie and search/tv endpoints don't support sort_by.
   if (currentSort) {
-    params.sort_by = currentSort;
+    if (currentMode === 'tv' && currentSort === 'primary_release_date.desc') {
+      params.sort_by = 'first_air_date.desc';
+    } else {
+      params.sort_by = currentSort;
+    }
   }
 
-  if (year) params.primary_release_year = year;
+  // Add vote count minimum for ranking so obscure 1-vote titles don't show up first.
+  // We scale this dynamically based on language volume so sparse catalogs (like Bengali) still show results,
+  // while high-volume/global catalogs (like English/Any Language) cleanly filter out low-vote spam.
+  if (currentSort === 'vote_average.desc') {
+    let minVotes = 50; // Default fallback
+    if (!language) {
+      // Any Language (Global Catalog)
+      minVotes = currentMode === 'tv' ? 100 : 200;
+    } else if (language === 'en') {
+      // English
+      minVotes = currentMode === 'tv' ? 50 : 100;
+    } else if (['es', 'fr', 'ja', 'ko', 'hi', 'zh', 'de', 'it', 'pt', 'ru'].includes(language)) {
+      // Major languages
+      minVotes = currentMode === 'tv' ? 25 : 50;
+    } else {
+      // Regional / Sparse languages (like Bengali, Marathi, etc.)
+      minVotes = currentMode === 'tv' ? 5 : 10;
+    }
+    params['vote_count.gte'] = minVotes;
+  }
+
+  if (year) {
+    if (currentMode === 'movie') {
+      params.primary_release_year = year;
+    } else {
+      params.first_air_date_year = year;
+    }
+  }
   
   // Choose query strategy
   // Use search/movie only for pure title searches with no filters.
   // When language is set, use discover/movie for reliable server-side filtering
   // (search/movie doesn't support with_original_language).
+  // FIX (Bug #1 / #2): previously this required year/genre/language to be EMPTY
+  // before using the text-search endpoint. That forced any title+filter combo into
+  // discover mode, which has NO free-text query parameter - the title was silently
+  // dropped server-side and only reappeared via a client-side scan of ~100 items.
+  // Year/genre/language are already handled as post-filters below (isSearchMode && year/genre/language),
+  // so search mode can stay active whenever cast filters aren't in play.
   const isSearchMode = titleQuery && !selectedActorId && !selectedActressId;
   if (isSearchMode) {
-    endpoint = 'search/movie';
+    endpoint = `search/${currentMode}`;
     params.query = titleQuery;
   } else {
     if (language) params.with_original_language = language;
     if (castQuery) params.with_cast = castQuery;
     if (genre) params.with_genres = genre;
-    if (ottOnly) {
-      // Server-side OTT filter. watch_region makes TMDb use region-specific provider data,
-      // which is far more accurate than the global (no-region) query and avoids false positives
-      // like old films TMDb incorrectly tags as streamable.
-      params.with_watch_monetization_types = 'flatrate';
-      params.watch_region = detectWatchRegion();
-    }
+    // We intentionally DO NOT use server-side OTT filtering (with_watch_monetization_types) here.
+    // TMDb's native server-side OTT filter completely hides titles with missing streaming data,
+    // which breaks our Smart Network Fallback. We handle all OTT filtering client-side.
   }
 
+    // FIX (Bug #2 / #3): this used to hard-exclude any title with vote_count below
+    // 5 (TV) / 50 (movie) whenever Ranking sort was active - server-side, before the
+    // client ever saw the result. Brand-new or region-specific titles (an Indian OTT
+    // original two weeks old, say) legitimately have 0-4 votes and were invisible
+    // by design. Low-confidence ratings are now dampened client-side instead of
+    // excluded - see weightedRating() - so nothing gets hidden, only re-ranked.
+
   try {
-    const data = await fetchFromTMDb(endpoint, params);
+    let newResults = [];
+    let currentApiPage = currentPage;
+    const isFirstLoad = (currentPage === 1);
+    let fetchedTotalPages = 1;
+    let autoFetchAttempts = 0;
     
-    totalPages = data.total_pages || 1;
-    totalResults = data.total_results || 0;
-    
-    let newResults = data.results || [];
-    
-    // Exclude TV series, episodes, and specials to ensure only movies are listed
-    newResults = newResults.filter(movie => !isLikelyTvSeriesOrSpecial(movie));
-    
-    // If OTT only is checked, filter out unreleased/future movies (cannot be streaming on OTT yet)
-    if (ottOnly) {
-      const todayStr = new Date().toISOString().split('T')[0];
-      newResults = newResults.filter(movie => {
-        if (!movie.release_date) return false;
-        return movie.release_date <= todayStr;
-      });
-    }
-    
-    // Apply client-side language filtering for search/movie
-    if (isSearchMode && language) {
-      newResults = newResults.filter(movie => movie.original_language === language);
-    }
-    
-    // Apply client-side genre filtering for search/movie
-    // genre may be a single ID ("53") or pipe-separated OR list ("53|9648")
-    if (isSearchMode && genre) {
-      const genreIds = genre.split('|');
-      newResults = newResults.filter(movie =>
-        movie.genre_ids && movie.genre_ids.some(id => genreIds.includes(String(id)))
-      );
-    }
-    
-    // Apply client-side fuzzy title filtering for discover/movie
-    if (!isSearchMode && titleQuery) {
-      newResults = newResults.filter(movie => 
-        fuzzyMatch(movie.title, titleQuery) || fuzzyMatch(movie.original_title, titleQuery)
-      );
-    }
-
-    // Per-movie OTT verification — search/movie mode only.
-    // discover/movie with watch_region + with_watch_monetization_types=flatrate already returns
-    // regionally-accurate OTT results server-side, so no per-movie calls needed there.
-    // search/movie doesn't support those params, so we verify each result individually.
-    if (ottOnly && isSearchMode && newResults.length > 0) {
-      try {
-        const providerPromises = newResults.map(async (movie) => {
-          try {
-            const res = await fetchFromTMDb(`movie/${movie.id}`, { append_to_response: 'watch/providers' });
-            return { movie, hasStream: checkHasStreamProviders(res) };
-          } catch (err) {
-            return { movie, hasStream: false };
-          }
-        });
-        const streamStatus = await Promise.all(providerPromises);
-        newResults = streamStatus.filter(s => s.hasStream).map(s => s.movie);
-      } catch (err) {
-        console.error("Error filtering OTT movies client-side:", err);
+    // Auto-fetch loop to ensure we get a decent number of results if client-side filters are strict
+    while (newResults.length < 15 && autoFetchAttempts < 10) {
+      params.page = currentApiPage;
+      const data = await fetchFromTMDb(endpoint, params);
+      
+      fetchedTotalPages = data.total_pages || 1;
+      totalResults = data.total_results || 0;
+      
+      let pageResults = data.results || [];
+      
+      // Exclude TV series, episodes, and specials to ensure only movies are listed
+      if (currentMode === 'movie') {
+        pageResults = pageResults.filter(movie => !isLikelyTvSeriesOrSpecial(movie));
       }
-    }
+      
+      
+      // Apply client-side language filtering for search/movie
+      if (isSearchMode && language) {
+        pageResults = pageResults.filter(movie => movie.original_language === language);
+      }
+      
+      // Apply client-side genre filtering for search/movie
+      if (isSearchMode && genre) {
+        const genreIds = genre.split('|');
+        pageResults = pageResults.filter(movie =>
+          movie.genre_ids && movie.genre_ids.some(id => genreIds.includes(String(id)))
+        );
+      }
+      
+      // Apply client-side fuzzy title filtering for discover/movie
+      if (!isSearchMode && titleQuery) {
+        pageResults = pageResults.filter(movie => 
+          fuzzyMatch(movie.title || movie.name, titleQuery) || fuzzyMatch(movie.original_title || movie.original_name, titleQuery)
+        );
+      }
 
-    if (currentPage === 1) {
+      // Per-movie OTT verification (runs globally for both search and discover)
+      // This allows our Smart Network Fallback to catch missing TMDb data.
+      if (ottOnly && pageResults.length > 0) {
+        try {
+          const providerPromises = pageResults.map(async (movie) => {
+            try {
+              // Exclude future-dated unreleased titles from OTT verification
+              const todayStr = new Date().toISOString().split('T')[0];
+              const releaseStr = movie.release_date || movie.first_air_date;
+              if (releaseStr && releaseStr > todayStr) {
+                return { movie, hasStream: false };
+              }
+
+              const res = await fetchFromTMDb(`${currentMode}/${movie.id}`, { append_to_response: 'watch/providers' });
+              return { movie, hasStream: checkHasStreamProviders(res) };
+            } catch (err) {
+              return { movie, hasStream: false };
+            }
+          });
+          const streamStatus = await Promise.all(providerPromises);
+          pageResults = streamStatus.filter(s => s.hasStream).map(s => s.movie);
+        } catch (err) {
+          console.error("Error filtering OTT movies client-side:", err);
+        }
+      }
+      
+      if (pageResults.length > 0) {
+        newResults = newResults.concat(pageResults);
+        if (newResults.length >= 15) {
+          break;
+        }
+      }
+      
+      if (currentApiPage >= fetchedTotalPages) {
+        break;
+      }
+      
+      currentApiPage++;
+      autoFetchAttempts++;
+    }
+    
+    // Update the app's understanding of pagination
+    currentPage = currentApiPage;
+    totalPages = fetchedTotalPages;
+
+
+    if (isFirstLoad) {
       activeSearchResults = newResults;
     } else {
       activeSearchResults.push(...newResults);
     }
 
     // Sort results (priority: relevance score of title match, then selected sort criteria)
-    if (titleQuery) {
-      activeSearchResults.sort((a, b) => {
-        const scoreA = Math.max(getTitleMatchScore(a.title, titleQuery), getTitleMatchScore(a.original_title, titleQuery));
-        const scoreB = Math.max(getTitleMatchScore(b.title, titleQuery), getTitleMatchScore(b.original_title, titleQuery));
-        
-        if (scoreA !== scoreB) {
-          return scoreB - scoreA; // Highest match tier first
-        }
-        
-        // Secondary sort: user selected sort criteria
-        if (currentSort === 'vote_average.desc') {
-          return (b.vote_average || 0) - (a.vote_average || 0);
-        } else if (currentSort === 'popularity.desc') {
-          return (b.popularity || 0) - (a.popularity || 0);
-        } else if (currentSort === 'primary_release_date.desc') {
-          return new Date(b.release_date || 0) - new Date(a.release_date || 0);
-        }
-        return (b.popularity || 0) - (a.popularity || 0);
-      });
-    } else {
-      if (currentSort === 'vote_average.desc') {
-        activeSearchResults.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
-      } else if (currentSort === 'popularity.desc') {
-        activeSearchResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-      } else if (currentSort === 'primary_release_date.desc') {
-        activeSearchResults.sort((a, b) => new Date(b.release_date || 0) - new Date(a.release_date || 0));
-      }
-    }
+    sortActiveResults();
 
     renderMovies(activeSearchResults);
 
-    // Update dynamic results counter label — always show actual displayed count
+    // Update dynamic results counter label - always show actual displayed count
     const displayedCount = activeSearchResults.length;
+    let suffix = currentMode === 'movie' ? `movie${displayedCount !== 1 ? 's' : ''}` : 'series';
     if (currentPage < totalPages) {
-      resultsCountText.innerHTML = `Found <span>${displayedCount}</span>+ movie${displayedCount !== 1 ? 's' : ''}`;
+      resultsCountText.innerHTML = `Found <span>${displayedCount}</span>+ ${suffix}`;
     } else {
-      resultsCountText.innerHTML = `Found <span>${displayedCount}</span> movie${displayedCount !== 1 ? 's' : ''}`;
+      resultsCountText.innerHTML = `Found <span>${displayedCount}</span> ${suffix}`;
     }
 
     // Manage load-more visibility
@@ -567,7 +729,8 @@ async function discoverMovies() {
   } finally {
 
     loadMoreBtn.disabled = false;
-    loadMoreBtn.querySelector('span').textContent = 'Load More Movies';
+    loadMoreBtn.disabled = false;
+    loadMoreBtn.querySelector('span').textContent = currentMode === 'movie' ? 'Load More Movies' : 'Load More Series';
   }
 }
 
@@ -676,7 +839,7 @@ function renderMovies(movies) {
         <div class="empty-icon">
           <i data-lucide="frown"></i>
         </div>
-        <h3>No Movies Found</h3>
+        <h3>No ${currentMode === 'movie' ? 'Movies' : 'Series'} Found</h3>
         <p>We couldn't find any titles matching those specific criteria. Try adjusting the year or search fields.</p>
       </div>
     `;
@@ -708,15 +871,16 @@ function renderMovies(movies) {
       : 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=400&h=600&q=80';
       
     let displayDate = 'N/A';
-    if (movie.release_date) {
-      const dateParts = movie.release_date.split('-');
+    const mDate = movie.release_date || movie.first_air_date;
+    if (mDate) {
+      const dateParts = mDate.split('-');
       if (dateParts.length >= 2) {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const monthIndex = parseInt(dateParts[1], 10) - 1;
         const month = months[monthIndex] || '';
         displayDate = `${month} ${dateParts[0]}`;
       } else {
-        displayDate = movie.release_date;
+        displayDate = mDate;
       }
     }
       
@@ -724,14 +888,14 @@ function renderMovies(movies) {
     
     card.innerHTML = `
       <div class="movie-poster-box">
-        <img src="${posterUrl}" alt="${movie.title}" loading="lazy">
+        <img src="${posterUrl}" alt="${movie.title || movie.name}" loading="lazy">
         <div class="movie-rating">
           <i data-lucide="star" class="fill-gold"></i>
           <span>${ratingVal}</span>
         </div>
       </div>
       <div class="movie-info">
-        <h3 class="movie-title">${movie.title}</h3>
+        <h3 class="movie-title">${movie.title || movie.name}</h3>
         <div class="movie-meta-row">
           <span>${displayDate}</span>
           <span style="text-transform: uppercase;">${movie.original_language}</span>
@@ -824,9 +988,12 @@ async function openMovieDetails(movieId) {
   }
   
   dialogPoster.src = posterUrl;
-  dialogPoster.alt = movie.title;
-  dialogTitle.textContent = movie.title;
-  const movieYear = movie.release_date ? movie.release_date.substring(0, 4) : '';
+  // BONUS FIX: TV results use .name, not .title - this was blanking the dialog
+  // heading and poster alt-text for every series (title.textContent was undefined).
+  dialogPoster.alt = movie.title || movie.name;
+  dialogTitle.textContent = movie.title || movie.name;
+  const movieDateStr = movie.release_date || movie.first_air_date;
+  const movieYear = movieDateStr ? movieDateStr.substring(0, 4) : '';
   dialogYear.textContent = movieYear || 'N/A';
   dialogLang.textContent = (movie.original_language || 'en').toUpperCase();
   
@@ -849,11 +1016,12 @@ async function openMovieDetails(movieId) {
 
   if (googleSearchBtn) {
     const langSuffix = getLanguageSuffix(movie.original_language);
-    const query = encodeURIComponent(`${movie.title} ${movieYear}${langSuffix} movie`);
+    const mediaType = currentMode === 'movie' ? 'movie' : 'tv show';
+    const query = encodeURIComponent(`${movie.title || movie.name} ${movieYear}${langSuffix} ${mediaType}`);
     googleSearchBtn.href = `https://www.google.com/search?q=${query}`;
   }
   dialogRatingVal.textContent = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
-  dialogOverview.textContent = movie.overview || 'No overview available for this movie.';
+  dialogOverview.textContent = movie.overview || 'No overview available.';
   dialogPopularity.textContent = movie.popularity ? movie.popularity.toFixed(1) : 'N/A';
   dialogVotes.textContent = movie.vote_count ? movie.vote_count.toLocaleString() : '0';
 
@@ -869,7 +1037,7 @@ async function openMovieDetails(movieId) {
 
   // Asynchronously fetch watch providers (with details)
   try {
-    const details = await fetchFromTMDb(`movie/${movieId}`, { append_to_response: 'watch/providers' });
+    const details = await fetchFromTMDb(`${currentMode}/${movieId}`, { append_to_response: 'watch/providers' });
     
     // Update additional fields from detailed fetch
     if (details.runtime) {
@@ -882,9 +1050,24 @@ async function openMovieDetails(movieId) {
     }
     
     if (typeTag) {
-      const isTvMovie = details.genres && details.genres.some(g => g.id === 10770);
-      typeTag.textContent = isTvMovie ? 'TV Movie' : 'Feature Film';
+      if (currentMode === 'movie') {
+        const isTvMovie = details.genres && details.genres.some(g => g.id === 10770);
+        typeTag.textContent = isTvMovie ? 'TV Movie' : 'Feature Film';
+      } else {
+        typeTag.textContent = 'TV Series';
+      }
       typeTag.classList.remove('hidden');
+    }
+    
+    if (dialogSeasons) {
+      if (currentMode === 'tv' && details.number_of_seasons) {
+        const seasons = details.number_of_seasons;
+        const eps = details.number_of_episodes;
+        dialogSeasons.textContent = `${seasons} Season${seasons !== 1 ? 's' : ''}` + (eps ? ` (${eps} eps)` : '');
+        dialogSeasons.classList.remove('hidden');
+      } else {
+        dialogSeasons.classList.add('hidden');
+      }
     }
     
     if (genresContainer && details.genres && details.genres.length > 0) {
@@ -915,13 +1098,6 @@ function renderWatchProviders(details) {
   if (rentContainer) rentContainer.innerHTML = '';
   if (rentSection) rentSection.style.display = 'none';
 
-  // If the movie is unreleased (release date is in the future), do not list any watch providers
-  const todayStr = new Date().toISOString().split('T')[0];
-  if (details.release_date && details.release_date > todayStr) {
-    container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms (unreleased).</span>';
-    return;
-  }
-
   let detectedCountry = 'IN';
   try {
     detectedCountry = (navigator.language || 'en-IN').split('-')[1]?.toUpperCase() || 'IN';
@@ -930,11 +1106,7 @@ function renderWatchProviders(details) {
   }
 
   const providersData = details['watch/providers'] || details.watch_providers;
-  
-  if (!providersData || !providersData.results) {
-    container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms.</span>';
-    return;
-  }
+  const results = providersData?.results;
 
   const flatrateList = [];
   const rentList = [];
@@ -942,7 +1114,8 @@ function renderWatchProviders(details) {
   const seenRent = new Set();
 
   const collectForCountry = (code) => {
-    const countryResults = providersData.results[code];
+    if (!results) return;
+    const countryResults = results[code];
     if (!countryResults) return;
 
     // Flatrate (subscription)
@@ -956,7 +1129,7 @@ function renderWatchProviders(details) {
       });
     }
 
-    // Rent and Buy (transactional — e.g. YouTube Movies, Google Play, iTunes)
+    // Rent and Buy (transactional - e.g. YouTube Movies, Google Play, iTunes)
     ['rent', 'buy'].forEach(type => {
       if (countryResults[type]) {
         countryResults[type].forEach(p => {
@@ -970,23 +1143,82 @@ function renderWatchProviders(details) {
     });
   };
 
-  // Priority: user country → India → US fallback
-  collectForCountry(detectedCountry);
-  if (detectedCountry !== 'IN') collectForCountry('IN');
-  if (flatrateList.length === 0 && rentList.length === 0 && detectedCountry !== 'US') {
-    collectForCountry('US');
-  }
-  // Last resort: any country
-  if (flatrateList.length === 0 && rentList.length === 0) {
-    for (const code of Object.keys(providersData.results)) {
-      collectForCountry(code);
-      if (flatrateList.length > 0 || rentList.length > 0) break;
+  if (results) {
+    // Priority: user country → India → US fallback
+    collectForCountry(detectedCountry);
+    if (detectedCountry !== 'IN') collectForCountry('IN');
+    if (flatrateList.length === 0 && rentList.length === 0 && detectedCountry !== 'US') {
+      collectForCountry('US');
+    }
+    // Last resort: any country
+    if (flatrateList.length === 0 && rentList.length === 0) {
+      for (const code of Object.keys(results)) {
+        collectForCountry(code);
+        if (flatrateList.length > 0 || rentList.length > 0) break;
+      }
     }
   }
 
-  if (flatrateList.length === 0) {
-    container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms.</span>';
-  }
+    const todayStr = new Date().toISOString().split('T')[0];
+    const releaseStr = details.release_date || details.first_air_date;
+    const isFutureRelease = releaseStr && releaseStr > todayStr;
+
+    if (flatrateList.length === 0 && !isFutureRelease) {
+      // Smart Fallback: If JustWatch dropped the ball, check networks/production companies for known OTTs
+      const knownOtts = [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video', alias: 'Amazon' },
+        { id: 315, name: 'Hoichoi', alias: 'SVF' },
+        { id: 315, name: 'Hoichoi', alias: 'Eskay' },
+        { id: 315, name: 'Hoichoi', alias: 'Surinder' },
+        { id: 122, name: 'Disney+ Hotstar', alias: 'Hotstar' },
+        { id: 232, name: 'Zee5' },
+        { id: 237, name: 'Sony LIV' },
+        { id: 392, name: 'JioCinema' },
+        { id: 337, name: 'Disney+' },
+        { id: 15, name: 'Hulu' },
+        { id: 350, name: 'Apple TV+' },
+        { id: 384, name: 'Max', alias: 'HBO' },
+        { id: 386, name: 'Peacock' },
+        { id: 531, name: 'Paramount+' },
+        { id: 10001, name: 'Chorki' },
+        { id: 10002, name: 'Bioscope' },
+        { id: 10003, name: 'Klikk' },
+        { id: 10004, name: 'Addatimes' },
+        { id: 10005, name: 'Bongo' }
+      ];
+
+      const allEntities = [...(details.networks || []), ...(details.production_companies || [])];
+      
+      for (const entity of allEntities) {
+        if (!entity.name) continue;
+        const entityNameLower = entity.name.toLowerCase();
+        
+        for (const ott of knownOtts) {
+          const matchesName = entityNameLower.includes(ott.name.toLowerCase());
+          const matchesAlias = ott.alias && entityNameLower.includes(ott.alias.toLowerCase());
+          
+          if (matchesName || matchesAlias) {
+            flatrateList.push({
+              provider_id: ott.id,
+              provider_name: entity.name, // Display the exact network name (e.g. "Hoichoi (IN)")
+              logo_path: entity.logo_path || null,
+              country: 'Global'
+            });
+            seenFlatrate.add(`${ott.id}-${entity.name}`);
+            break;
+          }
+        }
+      }
+    }
+
+    if (flatrateList.length === 0) {
+      if (isFutureRelease) {
+        container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms (unreleased).</span>';
+      } else {
+        container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms.</span>';
+      }
+    }
 
   // Map of TMDb provider_id → domain for Google site: queries.
   // All OTT pills intentionally use Google for more reliable title-to-page matching.
@@ -1028,6 +1260,11 @@ function renderWatchProviders(details) {
     3: 'play.google.com',         // Google Play Movies
     2: 'tv.apple.com',            // Apple iTunes
     68: 'microsoft.com',          // Microsoft Movies
+    10001: 'chorki.com',
+    10002: 'bioscope-live.com',
+    10003: 'klikk.tv',
+    10004: 'addatimes.com',
+    10005: 'bongobd.com',
   };
 
   function buildGoogleProviderSearchUrl(title, year, langSuffix, provider, intent) {
@@ -1035,15 +1272,19 @@ function renderWatchProviders(details) {
     const cleanTitle = (title || '').trim();
     const cleanYear = (year || '').trim();
     const cleanLang = (langSuffix || '').trim();
+    
+    // For site-restricted searches on specific streaming domains, we omit the release year
+    // and language suffix to keep the query broad. This allows Google's spelling corrector
+    // to handle transliteration differences (like Aajo vs Ajo) and match pages successfully.
     const query = domain
-      // Keep site searches broad so Google can match slug/title variations on OTT pages.
-      ? `${cleanTitle} ${cleanYear} ${cleanLang} site:${domain}`.replace(/\s+/g, ' ').trim()
+      ? `${cleanTitle} site:${domain}`.replace(/\s+/g, ' ').trim()
       : `${cleanTitle} ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 
-  const movieTitle = details.title || '';
-  const movieYear = details.release_date ? details.release_date.split('-')[0] : '';
+  const movieTitle = details.title || details.name || '';
+  const mDate = details.release_date || details.first_air_date;
+  const movieYear = mDate ? mDate.split('-')[0] : '';
   const langSuffix = getLanguageSuffix(details.original_language);
 
   flatrateList.forEach(provider => {
@@ -1198,15 +1439,19 @@ function setupEventListeners() {
     paginationContainer.classList.add('hidden');
     
     // Reset output
-    moviesGrid.innerHTML = `
-      <div class="empty-state glass-card" id="empty-state">
-        <div class="empty-icon">
-          <i data-lucide="popcorn"></i>
-        </div>
-        <h3>Discover Cinematic Masterpieces</h3>
-        <p>Fill out any of the criteria above to start searching. For the best results, select both an actor and actress to find their collaborative work!</p>
-      </div>
-    `;
+    moviesGrid.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    
+    // Update empty state icon & text for current mode
+    const emptyIcon = document.getElementById('empty-state-icon');
+    if (emptyIcon) {
+      emptyIcon.setAttribute('data-lucide', currentMode === 'movie' ? 'film' : 'tv');
+    }
+    const emptyText = document.getElementById('empty-state-text');
+    if (emptyText) {
+      emptyText.textContent = "Fill out any of the criteria above to start searching. For the best results, select both an actor and actress to find their collaborative work!";
+    }
+    
     resultsCountText.textContent = 'Ready for discovery';
     sortToolbar.classList.add('hidden');
     
@@ -1259,6 +1504,78 @@ function setupEventListeners() {
     });
   }
 
+document.querySelectorAll('input[name="search-mode"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    currentMode = e.target.value;
+    
+    // Update Theme and Icon
+    document.body.classList.toggle('series-mode', currentMode === 'tv');
+    const logoIconContainer = document.querySelector('.logo-icon');
+    if (logoIconContainer) {
+      logoIconContainer.innerHTML = `<i data-lucide="${currentMode === 'movie' ? 'film' : 'tv'}"></i>`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    
+    // Update Load More text
+    const loadMoreText = document.getElementById('load-more-text');
+    if (loadMoreText) {
+      loadMoreText.textContent = currentMode === 'movie' ? 'Load More Movies' : 'Load More Series';
+    }
+
+    // Update App Title
+    const appTitle = document.getElementById('main-title');
+    if (appTitle) {
+      appTitle.textContent = currentMode === 'movie' ? 'Cinema Search' : 'Series Search';
+    }
+
+    // Toggle Actor/Actress fields based on API support
+    const personFieldsRow = document.getElementById('person-fields-row');
+    if (personFieldsRow) {
+      if (currentMode === 'tv') {
+        personFieldsRow.classList.add('hidden');
+      } else {
+        personFieldsRow.classList.remove('hidden');
+      }
+    }
+    
+    // Also update empty state icon if it's currently visible
+    const emptyIcon = document.getElementById('empty-state-icon');
+    if (emptyIcon) {
+      emptyIcon.setAttribute('data-lucide', currentMode === 'movie' ? 'film' : 'tv');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Update genres dropdown
+    if (genreSelect) {
+      genreSelect.innerHTML = currentMode === 'movie' ? MOVIE_GENRES : TV_GENRES;
+    }
+    
+    // Clear search fields to prevent queries leaking across modes
+    if (titleInput) {
+      titleInput.value = '';
+      titleInput.placeholder = currentMode === 'movie' 
+        ? "e.g. Inception, Breaking Bad, Ocean..." 
+        : "e.g. Breaking Bad, The Office, Game of Thrones...";
+    }
+    if (yearInput) yearInput.value = '';
+    
+    // Clear actors
+    selectedActorId = null;
+    selectedActressId = null;
+    if (actorChip) actorChip.classList.add('hidden');
+    if (actressChip) actressChip.classList.add('hidden');
+    if (actorInputWrapper) actorInputWrapper.classList.remove('hidden');
+    if (actressInputWrapper) actressInputWrapper.classList.remove('hidden');
+    if (actorInput) actorInput.value = '';
+    if (actressInput) actressInput.value = '';
+    
+    updateHasValue();
+
+    currentPage = 1;
+    discoverMovies();
+  });
+});
+
   // Automatic filtering when changing movie genre selection
   if (genreSelect) {
     genreSelect.addEventListener('change', () => {
@@ -1269,6 +1586,11 @@ function setupEventListeners() {
   }
 
   // Sorting handlers
+  // FIX (Bug #3): sorting used to call discoverMovies() again, which re-fetches from
+  // TMDb using a sort-dependent server query - pulling a differently-sized pool of
+  // results for Ranking vs Popularity vs Release Date. Sorting is now a pure
+  // client-side re-order of whatever's already loaded, so switching sort buttons
+  // can never change the card count - only the order.
   sortOpts.forEach(opt => {
     opt.addEventListener('click', () => {
       sortOpts.forEach(o => o.classList.remove('active'));
@@ -1276,8 +1598,15 @@ function setupEventListeners() {
       
       currentSort = opt.dataset.sort;
       if (activeSearchResults.length > 0) {
-        currentPage = 1; // Reset to page 1 on sort change
-        discoverMovies();
+        const titleQuery = titleInput ? titleInput.value.trim() : '';
+        if (titleQuery) {
+          sortActiveResults();
+          firstNewCardIndex = -1; // Re-sort is not a "load more"; no stagger animation
+          renderMovies(activeSearchResults);
+        } else {
+          currentPage = 1; // Reset to page 1 on sort change
+          discoverMovies();
+        }
       }
     });
   });

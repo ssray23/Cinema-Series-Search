@@ -1,48 +1,45 @@
-# 🎬 Cinema Search
+# 🎬 CineSearch — Cinema & Series Discovery
 
-A sleek, premium movie discovery web app powered by [The Movie Database (TMDb) API](https://www.themoviedb.org/). Search for films by title, cast, year, language, genre, and streaming availability — all from a beautiful dark-mode desktop app.
+A sleek, premium movie and TV series discovery web app powered by [The Movie Database (TMDb) API](https://www.themoviedb.org/). Search for films and TV shows by title, cast, year, language, genre, and streaming availability — all from a beautiful dark-mode desktop app.
 
 ---
 
 ## ✨ Features
 
+### 📺 Dual Mode Discovery
+- **Cinema / Movies** — Browse feature films, blockbusters, and indie movies.
+- **Series / TV Shows** — Discover TV series, reality shows, anime, and mini-series.
+- **Dynamic UI Adapting** — Toggle between modes to automatically shift the interface colors, genres, search placeholders, and TMDB discovery queries.
+
 ### 🔍 Smart Search
-- **Movie Title / Keyword** — Type any title or keyword and results update automatically as you type (debounced to avoid API spam).
-- **Actor & Actress** — Real-time autocomplete with profile photo suggestions. Select both to find their collaborative films together.
-- **Release Year** — Filter by a specific year.
-- **Original Language** — Filter by the film's original production language (Hindi, Tamil, English, French, etc.).
-- **Movie Genre** — Filter by genre (Action, Comedy, Drama, Thriller, Sci-Fi, etc.).
-- **OTT Only** — Tick the checkbox to show only movies available for flatrate streaming on OTT platforms in your region.
+- **Title / Keyword** — Type any title or keyword and results update automatically as you type (debounced to avoid API spam).
+- **Actor & Actress** — Real-time autocomplete with profile photo suggestions. Select both to find their collaborative titles together.
+- **Release Year / First Air Date** — Filter by a specific year.
+- **Original Language** — Filter by the title's original production language (Hindi, Bengali, English, French, Japanese, etc.).
+- **Dynamic Genres** — Filter by genres matching the active mode (e.g. Clapperboard updates dynamically to Movie genres or TV genres).
+- **OTT Only** — Tick the checkbox to show only titles available for flatrate streaming on OTT platforms in your region.
 
 ### ⚡ Fully Reactive
-Every filter updates results **instantly** — no need to hit a search button after your initial search. Changing any field (title, year, language, genre, OTT toggle) automatically refreshes the results in real time.
+Every filter updates results **instantly** — no need to hit a search button. Changing any criteria (title, year, language, genre, OTT toggle, or sort order) automatically refreshes the results in real time.
 
-### 🎭 Movie Detail Card
-Click any movie card to open a full-detail modal showing:
+### 🎭 Media Detail Card
+Click any card to open a full-detail modal showing:
 - High-resolution backdrop image
-- Title, release year, runtime, and genres
+- Title, release/air year, runtime, and genres
 - TMDb rating and vote count
 - Full synopsis
-- **OTT streaming providers** available in your region (clickable — takes you directly to the platform's search page for that movie)
-- **🔍 Search with Google** button — searches `"{title} {year} the movie"` to avoid ambiguous results
+- **OTT streaming providers** available in your region (clickable — takes you directly to the platform's search page for that title)
+- **🔍 Search with Google** button — searches `"{title} {year}"` to avoid ambiguous results
 
 ### 🧠 Hybrid Search Strategy
-The app intelligently switches between two TMDb endpoints:
-- **Title search mode** (`/search/movie`) — when a title/keyword is typed. Genre and language filters are applied client-side.
-- **Discover mode** (`/discover/movie`) — when actor/actress is selected (without a title). Genre, language, OTT availability, and year are applied natively via TMDb API parameters.
+The app intelligently switches between two TMDb API pipelines:
+- **Title search mode** (`/search/movie` & `/search/tv`) — when a title/keyword is typed. Genre and language filters are applied client-side.
+- **Discover mode** (`/discover/movie` & `/discover/tv`) — when actor/actress is selected (without a title). Genre, language, and year are applied natively via TMDb API parameters.
 
-### 🖥️ Desktop App (macOS)
-Cinema Search runs as a native-feeling **desktop application** via a double-clickable icon on your Desktop:
-- **Double-click** the icon to launch — opens the app in your default browser automatically.
-- If the tab was accidentally closed, double-clicking again **reopens it**.
-- The app runs a lightweight local Python server (`server.py`) on port `8080`.
-
-### ⚙️ Other Controls (top-right header)
-| Button | Action |
-|---|---|
-| ☀️ / 🌙 | Toggle between dark and light theme |
-| ⚙️ | Change your TMDb API key |
-| ⏻ | Gracefully shut down the local server and close the browser tab |
+### ⚙️ Adaptive Vote Thresholds
+- To ensure high-quality results when using **Ranking** sort, CineSearch implements dynamic minimum vote thresholds.
+- When searching "Any Language" or English, it uses high vote thresholds (up to 200 votes) to screen out low-quality spam.
+- When searching regional/sparse catalogs (like Bengali or Marathi), the threshold automatically scales down to 5–10 votes so no titles are hidden.
 
 ---
 
@@ -74,28 +71,30 @@ On first launch, a prompt will appear asking for your TMDb API key. Paste it in 
 
 ## 🎮 How to Use
 
-### Basic Movie Search
-1. Type a movie title in the **Movie Title / Keyword** field — results appear as you type.
-2. Optionally add a **Year**, **Language**, or **Genre** to narrow results.
-3. Tick **Only show movies available to stream on OTTs** to filter for streaming availability.
+### Switch Modes (Movies vs. Series)
+- Select the **Cinema** or **Series** button at the top header to search for movies or TV shows respectively.
 
-### Cast Search (Find Collaborative Films)
-1. Type an actor's name in the **Actor** field and select from the autocomplete suggestions.
+### Basic Title Search
+1. Type a title in the **Title / Keyword** field — results appear as you type.
+2. Optionally add a **Year**, **Language**, or **Genre** to narrow results.
+3. Tick **Only show titles available to stream on OTTs** to filter for streaming availability.
+
+### Cast Search (Find Collaborative Titles)
+1. Type an actor's name in the **Actor** field and select from autocomplete suggestions.
 2. Optionally do the same for **Actress**.
-3. Results show all films featuring the selected person(s). Add genre, year, or language to refine further.
+3. Results show all collaborative films/shows featuring the selected people. Add genre, year, or language to refine further.
 4. Click **Reset Filters** to clear everything and start fresh.
 
-### Movie Detail
-- Click any movie card to open its full detail modal.
-- Click an **OTT platform pill** (e.g. Netflix, Zee5, Prime Video) to go directly to that platform's search page for the movie.
-- Click **Search with Google** to open a targeted Google search for the movie.
-- Press **Esc** or click outside the modal to close it.
+### Detail View
+- Click any card to open its detail modal.
+- Click an **OTT platform pill** (e.g. Netflix, Zee5, Prime Video, Hoichoi) to go directly to that platform's search page.
+- Click **Search with Google** to open a targeted Google search for the title.
 
 ### Sorting
 Once results are shown, use the sort bar to reorder by:
-- ⭐ **Ranking** — TMDb vote average (filters out low-vote films)
+- ⭐ **Ranking** — TMDb vote average (with language-aware minimum vote thresholds)
 - 🔥 **Popularity** — TMDb popularity score
-- 📅 **Release Date** — newest first
+- 📅 **Release Date / First Air Date** — newest first
 
 ---
 

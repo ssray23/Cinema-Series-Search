@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CineSearch - Modern Movie Discovery</title>
+  <title>CineSearch - Modern Cinema & Series Discovery</title>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=10">
+  <link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
   <!-- Ambient background glows -->
@@ -51,10 +51,22 @@
           <i data-lucide="film"></i>
         </div>
         <div>
-          <h1>Cinema Search</h1>
-          <p class="tagline">The smartest way to search, filter, and discover your next favorite movie</p>
+          <h1 id="main-title">Cinema Search</h1>
+          <p class="tagline">The smartest way to search, filter, and discover your next favorite title</p>
         </div>
       </div>
+      
+      <!-- Mode Toggle Switch -->
+      <div class="mode-toggle-container">
+        <div class="mode-toggle">
+          <input type="radio" id="mode-movie" name="search-mode" value="movie" checked>
+          <label for="mode-movie"><i data-lucide="film"></i> Cinema</label>
+          <input type="radio" id="mode-tv" name="search-mode" value="tv">
+          <label for="mode-tv"><i data-lucide="tv"></i> Series</label>
+          <div class="mode-slider"></div>
+        </div>
+      </div>
+
       <div class="header-actions">
         <button id="theme-toggle-btn" class="btn header-control" title="Toggle Theme">
           <i data-lucide="sun" id="theme-icon"></i>
@@ -77,20 +89,20 @@
         </div>
         
         <form id="search-form">
-          <!-- Movie Title Input -->
+          <!-- Title Input -->
           <div class="input-group">
-            <label for="title-input">Movie Title / Keyword</label>
+            <label for="title-input" id="title-label">Title / Keyword</label>
             <div class="input-with-icon has-inline-clear">
               <i data-lucide="search"></i>
-              <input type="text" id="title-input" placeholder="e.g. Inception, Gladiator, Ocean..." autocomplete="off">
-              <button type="button" id="title-clear-btn" class="input-clear-btn hidden" aria-label="Clear movie title">
+              <input type="text" id="title-input" placeholder="e.g. Inception, Breaking Bad, Ocean..." autocomplete="off">
+              <button type="button" id="title-clear-btn" class="input-clear-btn hidden" aria-label="Clear title">
                 <i data-lucide="x"></i>
               </button>
             </div>
           </div>
 
           <!-- Person Fields: Actor & Actress -->
-          <div class="form-row flex-row">
+          <div class="form-row flex-row" id="person-fields-row">
             <!-- Actor Suggest Input -->
             <div class="input-group search-person-group">
               <label for="actor-input">Actor</label>
@@ -180,7 +192,7 @@
             </div>
 
             <div class="input-group size-large">
-              <label for="genre-select">Movie Genre</label>
+              <label for="genre-select" id="genre-label">Genre</label>
               <div class="input-with-icon select-wrapper">
                 <i data-lucide="clapperboard"></i>
                 <select id="genre-select">
@@ -214,7 +226,7 @@
             <label class="checkbox-label" for="ott-only-checkbox">
               <input type="checkbox" id="ott-only-checkbox">
               <span class="custom-checkbox"></span>
-              <span class="label-text">Only show movies available to stream on OTTs</span>
+              <span class="label-text">Only show titles available to stream on OTTs</span>
             </label>
           </div>
 
@@ -266,17 +278,17 @@
           <!-- Empty State by default -->
           <div class="empty-state glass-card" id="empty-state">
             <div class="empty-icon">
-              <i data-lucide="popcorn"></i>
+              <i id="empty-state-icon" data-lucide="film"></i>
             </div>
-            <h3>Discover Cinematic Masterpieces</h3>
-            <p>Fill out any of the criteria above to start searching. For the best results, select both an actor and actress to find their collaborative work!</p>
+            <h3>Discover Masterpieces</h3>
+            <p id="empty-state-text">Fill out any of the criteria above to start searching. For the best results, select both an actor and actress to find their collaborative work!</p>
         </div>
       </div>
 
       <!-- Pagination Controls -->
         <div id="pagination-container" class="pagination-container hidden">
           <button id="load-more-btn" class="btn btn-secondary">
-            <span>Load More Movies</span>
+            <span id="load-more-text">Load More</span>
             <i data-lucide="chevron-down"></i>
           </button>
         </div>
@@ -295,7 +307,7 @@
       
       <div class="dialog-content">
         <div class="dialog-poster-wrapper">
-          <img id="dialog-poster" src="" alt="Movie Poster" class="dialog-poster">
+          <img id="dialog-poster" src="" alt="Poster" class="dialog-poster">
         </div>
         
         <div class="dialog-info">
@@ -306,7 +318,8 @@
                 <span id="dialog-year" class="meta-tag">2026</span>
                 <span id="dialog-lang" class="meta-tag">EN</span>
                 <span id="dialog-runtime" class="meta-tag hidden">-- min</span>
-                <span id="dialog-type" class="meta-tag hidden">Movie</span>
+                <span id="dialog-seasons" class="meta-tag hidden">-- Seasons</span>
+                <span id="dialog-type" class="meta-tag hidden">Title</span>
                 <span id="dialog-rating" class="rating-tag">
                   <i data-lucide="star" class="fill-gold"></i>
                   <span id="dialog-rating-val">8.2</span>
@@ -366,6 +379,6 @@
   </div>
 
   <!-- Script initialization -->
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

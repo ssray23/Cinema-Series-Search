@@ -361,6 +361,26 @@ function getTitleMatchScore(title, query) {
 }
 
 /**
+ * Substring match that requires the keyword to sit on a word boundary, so a short
+ * keyword like "max" matches the standalone word "Max" (e.g. "HBO Max") but not a
+ * keyword embedded inside a longer word (e.g. "Maximilian Films Ltd.").
+ */
+function matchesOttKeyword(text, keyword) {
+  if (!text || !keyword) return false;
+  const lowerText = text.toLowerCase();
+  const lowerKeyword = keyword.toLowerCase();
+  const isAlnum = (ch) => ch !== undefined && /[a-z0-9]/.test(ch);
+  let idx = lowerText.indexOf(lowerKeyword);
+  while (idx !== -1) {
+    if (!isAlnum(lowerText[idx - 1]) && !isAlnum(lowerText[idx + lowerKeyword.length])) {
+      return true;
+    }
+    idx = lowerText.indexOf(lowerKeyword, idx + 1);
+  }
+  return false;
+}
+
+/**
  * Check if a movie is available on flatrate subscription OTT platforms.
  */
 function checkHasStreamProviders(movieData) {
@@ -374,22 +394,22 @@ function checkHasStreamProviders(movieData) {
       if (watchData[loc]?.flatrate?.length > 0) return true;
     }
   }
-  
+
   // Fallback: Check Networks and Production Companies for known OTTs
   const knownOttKeywords = [
-    'netflix', 'amazon', 'prime video', 'hoichoi', 'zee5', 'hotstar', 'disney+', 'hulu', 
+    'netflix', 'amazon', 'prime video', 'hoichoi', 'zee5', 'hotstar', 'disney+', 'hulu',
     'apple tv', 'apple tv+', 'sony liv', 'jiocinema', 'peacock', 'paramount+', 'max', 'hbo',
     'chorki', 'bioscope', 'addatimes', 'klikk', 'bongo', 'bongobd', 'svf', 'eskay', 'surinder'
   ];
-  
+
   const networks = movieData.networks || [];
   for (const n of networks) {
-    if (n.name && knownOttKeywords.some(ott => n.name.toLowerCase().includes(ott))) return true;
+    if (n.name && knownOttKeywords.some(ott => matchesOttKeyword(n.name, ott))) return true;
   }
-  
+
   const companies = movieData.production_companies || [];
   for (const c of companies) {
-    if (c.name && knownOttKeywords.some(ott => c.name.toLowerCase().includes(ott))) return true;
+    if (c.name && knownOttKeywords.some(ott => matchesOttKeyword(c.name, ott))) return true;
   }
 
   console.log("checkHasStreamProviders: No stream providers found for", movieData.name || movieData.title, movieData);
@@ -1206,12 +1226,11 @@ function renderWatchProviders(details) {
       
       for (const entity of allEntities) {
         if (!entity.name) continue;
-        const entityNameLower = entity.name.toLowerCase();
-        
+
         for (const ott of knownOtts) {
-          const matchesName = entityNameLower.includes(ott.name.toLowerCase());
-          const matchesAlias = ott.alias && entityNameLower.includes(ott.alias.toLowerCase());
-          
+          const matchesName = matchesOttKeyword(entity.name, ott.name);
+          const matchesAlias = ott.alias && matchesOttKeyword(entity.name, ott.alias);
+
           if (matchesName || matchesAlias) {
             flatrateList.push({
               provider_id: ott.id,

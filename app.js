@@ -364,7 +364,11 @@ function getTitleMatchScore(title, query) {
  * Check if a movie is available on flatrate subscription OTT platforms.
  */
 function checkHasStreamProviders(movieData) {
-  const watchData = movieData['watch/providers']?.results;
+  if (!movieData) {
+    console.warn("checkHasStreamProviders: movieData is empty/undefined");
+    return false;
+  }
+  const watchData = (movieData['watch/providers'] || movieData.watch_providers)?.results;
   if (watchData) {
     for (const loc of Object.keys(watchData)) {
       if (watchData[loc]?.flatrate?.length > 0) return true;
@@ -388,6 +392,7 @@ function checkHasStreamProviders(movieData) {
     if (c.name && knownOttKeywords.some(ott => c.name.toLowerCase().includes(ott))) return true;
   }
 
+  console.log("checkHasStreamProviders: No stream providers found for", movieData.name || movieData.title, movieData);
   return false;
 }
 
@@ -530,33 +535,38 @@ async function discoverMovies() {
   // If sorting is by popularity or release date, pass to TMDb discover.
   // Note: search/movie and search/tv endpoints don't support sort_by.
   if (currentSort) {
-    if (currentMode === 'tv' && currentSort === 'primary_release_date.desc') {
-      params.sort_by = 'first_air_date.desc';
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (currentSort === 'vote_average.desc') {
+      // IMPORTANT: we deliberately do NOT send sort_by=vote_average.desc to TMDb.
+      // Without a vote-count floor, TMDb's rating sort returns the pathological tail
+      // first - obscure titles with a single 10/10 vote (festival shorts, unreleased
+      // films) - which are almost never on any OTT service, so the OTT filter then
+      // wipes the whole page. Instead we fetch a real, broad pool ordered by
+      // popularity (which still surfaces low-vote recent OTT releases) and apply the
+      // Ranking order client-side via weightedRating() in sortActiveResults().
+      params.sort_by = 'popularity.desc';
+    } else if (currentSort === 'primary_release_date.desc') {
+      // Release Date must ALWAYS be a true newest-first date sort - we cannot fake it
+      // with a popularity pool (that would only re-order the most *popular* titles by
+      // date and never surface genuinely new-but-obscure releases). Nothing is hidden;
+      // when OTT is on and the raw feed is provider-sparse, the fetch loop below just
+      // digs through more pages to accumulate enough streamable titles, in date order.
+      if (currentMode === 'tv') {
+        params.sort_by = 'first_air_date.desc';
+        params['first_air_date.lte'] = todayStr;
+      } else {
+        params.sort_by = 'primary_release_date.desc';
+        params['primary_release_date.lte'] = todayStr;
+      }
     } else {
       params.sort_by = currentSort;
     }
   }
 
-  // Add vote count minimum for ranking so obscure 1-vote titles don't show up first.
-  // We scale this dynamically based on language volume so sparse catalogs (like Bengali) still show results,
-  // while high-volume/global catalogs (like English/Any Language) cleanly filter out low-vote spam.
-  if (currentSort === 'vote_average.desc') {
-    let minVotes = 50; // Default fallback
-    if (!language) {
-      // Any Language (Global Catalog)
-      minVotes = currentMode === 'tv' ? 100 : 200;
-    } else if (language === 'en') {
-      // English
-      minVotes = currentMode === 'tv' ? 50 : 100;
-    } else if (['es', 'fr', 'ja', 'ko', 'hi', 'zh', 'de', 'it', 'pt', 'ru'].includes(language)) {
-      // Major languages
-      minVotes = currentMode === 'tv' ? 25 : 50;
-    } else {
-      // Regional / Sparse languages (like Bengali, Marathi, etc.)
-      minVotes = currentMode === 'tv' ? 5 : 10;
-    }
-    params['vote_count.gte'] = minVotes;
-  }
+  // USP: we show EVERYTHING and let the left-hand filters (title, year, language,
+  // genre, cast, OTT) do all the narrowing. We deliberately do NOT apply any
+  // vote-count minimum here - even a title with a single vote must show up.
+  // Low-confidence ratings are only re-ranked (see weightedRating), never hidden.
 
   if (year) {
     if (currentMode === 'movie') {
@@ -603,11 +613,14 @@ async function discoverMovies() {
     let fetchedTotalPages = 1;
     let autoFetchAttempts = 0;
     
-    // Auto-fetch loop to ensure we get a decent number of results if client-side filters are strict
-    while (newResults.length < 15 && autoFetchAttempts < 10) {
+    // Auto-fetch loop to ensure we get a decent number of results if client-side filters are strict.
+    // The OTT filter is the strictest (many titles have no streaming providers), so when it's on we
+    // allow the loop to dig through more pages to accumulate enough streamable titles - in sort order.
+    const maxAutoFetch = ottOnly ? 25 : 10;
+    while (newResults.length < 15 && autoFetchAttempts < maxAutoFetch) {
       params.page = currentApiPage;
-      const data = await fetchFromTMDb(endpoint, params);
-      
+      let data = await fetchFromTMDb(endpoint, params);
+
       fetchedTotalPages = data.total_pages || 1;
       totalResults = data.total_results || 0;
       
@@ -655,6 +668,7 @@ async function discoverMovies() {
               const res = await fetchFromTMDb(`${currentMode}/${movie.id}`, { append_to_response: 'watch/providers' });
               return { movie, hasStream: checkHasStreamProviders(res) };
             } catch (err) {
+              console.error(`Error fetching providers for TV/Movie ${movie.id}:`, err);
               return { movie, hasStream: false };
             }
           });

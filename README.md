@@ -36,10 +36,9 @@ The app intelligently switches between two TMDb API pipelines:
 - **Title search mode** (`/search/movie` & `/search/tv`) — when a title/keyword is typed. Genre and language filters are applied client-side.
 - **Discover mode** (`/discover/movie` & `/discover/tv`) — when actor/actress is selected (without a title). Genre, language, and year are applied natively via TMDb API parameters.
 
-### ⚙️ Adaptive Vote Thresholds
-- To ensure high-quality results when using **Ranking** sort, CineSearch implements dynamic minimum vote thresholds.
-- When searching "Any Language" or English, it uses high vote thresholds (up to 200 votes) to screen out low-quality spam.
-- When searching regional/sparse catalogs (like Bengali or Marathi), the threshold automatically scales down to 5–10 votes so no titles are hidden.
+### 🎯 "Show Everything" Philosophy
+- **No vote-count hiding** — Even a title with a single vote appears in results. The left-hand filters (title, year, language, genre, cast, OTT) are the only constraints.
+- **Smart ranking without exclusion** — The **Ranking** sort uses a `weightedRating` formula that dampens low-confidence (few-vote) titles down in the list instead of hiding them. A fresh OTT original with 2 votes and a 9.0 average still shows; it just ranks lower than a 5,000-vote 8.0 average.
 
 ---
 
@@ -95,6 +94,53 @@ Once results are shown, use the sort bar to reorder by:
 - ⭐ **Ranking** — TMDb vote average (with language-aware minimum vote thresholds)
 - 🔥 **Popularity** — TMDb popularity score
 - 📅 **Release Date / First Air Date** — newest first
+
+---
+
+## 🧬 How It Works
+
+### The Smart Fetch Strategy
+
+CineSearch uses an intelligent three-stage pipeline to balance **speed** (fewer API calls), **completeness** (no vote-count hiding), and **quality** (real titles, not spam):
+
+1. **Server-side pool selection**
+   - **Ranking sort**: Fetch by popularity (not vote-average), avoiding the pathological tail of obscure 1-vote festival shorts
+   - **Release Date sort**: Always fetch by true date order (newest-first)
+   - **Popularity sort**: Fetch by popularity (pass-through)
+
+2. **Client-side filtering & verification**
+   - Title fuzzy-match (when title is typed)
+   - Language filter (exact match on `original_language`)
+   - Genre filter (quick `Array.includes`)
+   - **OTT verification** (the expensive one): For each candidate title, fetch its provider details from TMDb's `/watch/providers` endpoint and check if it's streamable in your region
+
+3. **Auto-pagination with smart loop**
+   - The fetch loop targets **15+ results per page** and adapts:
+     - **OTT off**: Stops after max 10 pages of attempts (most filters are cheap)
+     - **OTT on**: Allows up to 25 pages (each title requires an extra API call to verify providers, so it digs deeper to accumulate enough streamable titles)
+   - **Important**: The loop accumulates results *in sort order* — when OTT filtering strips 80% of a page, the next page's newest or highest-rated titles still preserve their intended order
+
+### Ranking Without Exclusion
+
+The `weightedRating()` function (line 456) ensures low-vote titles don't get hidden:
+
+```javascript
+function weightedRating(item) {
+  const voteCount = item.vote_count || 0;
+  const voteAverage = item.vote_average || 0;
+  const minVotes = currentMode === 'tv' ? 5 : 50;
+  if (voteCount >= minVotes) return voteAverage;
+  return voteAverage * (voteCount / minVotes);
+}
+```
+
+Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 × (2/5) = 3.6`, ranking lower than a **5,000-vote 8.0** average (which scores as `8.0`). But the 2-vote title still **appears** — it's not hidden, just re-ranked fairly.
+
+### Hybrid Search Endpoints
+
+- **Title search** (`/search/movie`, `/search/tv`): When you type a keyword, the app uses TMDb's full-text search (cheaper, no cast support)
+- **Discover mode** (`/discover/movie`, `/discover/tv`): When you select an actor, the app switches to discover (supports cast filtering via `with_cast`)
+- Genre, language, and year filters apply client-side in search mode (TMDb's search endpoint doesn't support them) and server-side in discover mode (for efficiency)
 
 ---
 

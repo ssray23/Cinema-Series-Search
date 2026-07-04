@@ -9,7 +9,7 @@ A sleek, premium movie and TV series discovery web app powered by [The Movie Dat
 ### 📺 Dual Mode Discovery
 - **Cinema / Movies** — Browse feature films, blockbusters, and indie movies.
 - **Series / TV Shows** — Discover TV series, reality shows, anime, and mini-series.
-- **Dynamic UI Adapting** — Toggle between modes to automatically shift the interface colors, genres, search placeholders, and TMDB discovery queries.
+- **Dynamic UI Adapting** — Toggle between modes to automatically shift the interface background gradients (soft pastel CMYK red for Cinema mode, teal-ish blue for Series mode), control button outlines, genres, search placeholders, and TMDB discovery queries.
 
 ### 🔍 Smart Search
 - **Title / Keyword** — Type any title or keyword and results update automatically as you type (debounced to avoid API spam).

@@ -377,6 +377,12 @@ if (currentMode === 'movie') {
 }
 ```
 
+### Dynamic Theme and Mode Adapting (CSS Custom Properties)
+To create a premium visual experience, the page background and control buttons automatically update when switching between Cinema (Movie) and Series (TV) modes, and between Dark and Light themes:
+- **Cinema Mode background**: Uses a soft red-hued gradient (`#3d1c1c` to `#17181c` in dark theme, `#ffc2c2` to `#fff0f0` in light theme).
+- **Series Mode background**: Uses a soft teal-blue-hued gradient (`#132f35` to `#17181c` in dark theme, `#b2f0f4` to `#f0fbfc` in light theme).
+- **Button Highlights**: Control buttons like the theme toggle (`#theme-toggle-btn`), configuration key (`#change-key-btn`), and shutdown controls (`.shutdown-control`) dynamically map to `var(--accent)` and `var(--accent-glow)`. This automatically flips their outlines and shadow colors between red and cyan/teal depending on the active search mode, preventing color mismatches.
+
 ### Detail Modal (Click Card)
 ```javascript
 tile.addEventListener('click', () => {

@@ -1,6 +1,7 @@
 /* --- CSS Reset & Variables --- */
 :root {
   --bg-primary: #2b2f36;
+  --body-bg: linear-gradient(135deg, #3d1c1c 0%, #17181c 100%);
   --bg-card: rgba(45, 50, 58, 0.65);
   --bg-card-hover: rgba(55, 61, 70, 0.8);
   --bg-input: rgba(30, 34, 40, 0.8);
@@ -39,6 +40,7 @@
 
 body.light-theme {
   --bg-primary: #f3f4f6;
+  --body-bg: linear-gradient(135deg, #ffc2c2 0%, #fff0f0 100%);
   --bg-card: rgba(255, 255, 255, 0.75);
   --bg-card-hover: rgba(255, 255, 255, 0.95);
   --bg-input: rgba(255, 255, 255, 0.95);
@@ -177,7 +179,8 @@ body.light-theme .app-header h1 {
 }
 
 body {
-  background-color: var(--bg-primary);
+  background: var(--body-bg);
+  background-attachment: fixed;
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 14px;
@@ -345,27 +348,16 @@ body.light-theme .genre-pill {
   border-radius: 50%;
 }
 
-.shutdown-btn {
-  color: var(--red) !important;
-  border-color: rgba(239, 68, 68, 0.15) !important;
+.shutdown-control {
+  color: var(--accent) !important;
+  border-color: var(--accent-glow) !important;
 }
 
-.shutdown-btn:hover {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border-color: var(--red) !important;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3) !important;
-}
-
-/* Light theme overrides for shutdown button */
-.light-theme .shutdown-btn {
-  color: #dc2626 !important;
-  border-color: rgba(220, 38, 38, 0.15) !important;
-}
-
-.light-theme .shutdown-btn:hover {
-  background: rgba(220, 38, 38, 0.15) !important;
-  border-color: #dc2626 !important;
-  box-shadow: 0 0 10px rgba(220, 38, 38, 0.2) !important;
+.shutdown-control:hover {
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 10px var(--accent-glow) !important;
 }
 
 .btn-full {
@@ -683,12 +675,6 @@ body.light-theme .header-control:hover {
   background: #f3f4f6;
   color: #111827;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.shutdown-control:hover {
-  background: rgba(239, 68, 68, 0.2) !important;
-  color: #ef4444 !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
 }
 
 .logo-icon {
@@ -1638,36 +1624,24 @@ body.light-theme .provider-pill--rent {
 
 .light-theme #theme-toggle-btn {
   color: var(--accent) !important;
-  border-color: rgba(204, 82, 82, 0.25) !important;
+  border-color: var(--accent-glow) !important;
 }
 
 .light-theme #theme-toggle-btn:hover {
-  background: rgba(204, 82, 82, 0.15) !important;
+  background: var(--accent-glow) !important;
   border-color: var(--accent) !important;
-  box-shadow: 0 0 10px rgba(204, 82, 82, 0.3) !important;
+  box-shadow: 0 0 10px var(--accent-glow) !important;
 }
 
 #change-key-btn {
-  color: var(--secondary) !important;
-  border-color: rgba(6, 182, 212, 0.25) !important;
+  color: var(--accent) !important;
+  border-color: var(--accent-glow) !important;
 }
 
 #change-key-btn:hover {
-  background: rgba(6, 182, 212, 0.15) !important;
-  border-color: var(--secondary) !important;
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3) !important;
-}
-
-/* Light theme overrides for change-key-btn */
-.light-theme #change-key-btn {
-  color: #0891b2 !important;
-  border-color: rgba(8, 145, 178, 0.25) !important;
-}
-
-.light-theme #change-key-btn:hover {
-  background: rgba(8, 145, 178, 0.15) !important;
-  border-color: #0891b2 !important;
-  box-shadow: 0 0 10px rgba(8, 145, 178, 0.3) !important;
+  background: var(--accent-glow) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 10px var(--accent-glow) !important;
 }
 
 /* --- Mode Toggle Switch --- */
@@ -1781,11 +1755,31 @@ body.light-theme .mode-toggle input[type="radio"]:checked + label {
 body.series-mode {
   --accent: #06b6d4; /* Cyan/Blue */
   --accent-glow: rgba(6, 182, 212, 0.4);
+  --body-bg: linear-gradient(135deg, #132f35 0%, #17181c 100%);
 }
 
 body.light-theme.series-mode {
   --accent: #0891b2;
   --accent-glow: rgba(8, 145, 178, 0.15);
+  --body-bg: linear-gradient(135deg, #b2f0f4 0%, #f0fbfc 100%);
+}
+
+body.series-mode .btn-primary {
+  background: linear-gradient(135deg, var(--accent), #039db8);
+  box-shadow: 0 4px 15px var(--accent-glow);
+}
+body.series-mode .btn-primary:hover {
+  background: linear-gradient(135deg, #0891b2, #039db8);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+body.light-theme.series-mode .btn-primary {
+  background: var(--accent);
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.25);
+  border-color: #374151;
+}
+body.light-theme.series-mode .btn-primary:hover {
+  background: #0891b2;
+  box-shadow: 0 6px 18px rgba(8, 145, 178, 0.4);
 }
 
 body.series-mode .suggestion-item:hover {

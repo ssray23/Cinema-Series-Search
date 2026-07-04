@@ -151,7 +151,7 @@ Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 
 | `index.html` | App structure and all UI components |
 | `app.js` | All search logic, API calls, event listeners, and rendering |
 | `styles.css` | Full design system — dark/light themes, animations, glassmorphism |
-| `server.py` | Lightweight Python HTTP server (serves the app on port 8080) |
+| `server.py` | Lightweight Python HTTP server (serves the app on port 8080 with strict no-cache headers for dev) |
 | `README.md` | This file |
 
 ---

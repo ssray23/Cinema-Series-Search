@@ -391,7 +391,11 @@ function checkHasStreamProviders(movieData) {
   const watchData = (movieData['watch/providers'] || movieData.watch_providers)?.results;
   if (watchData) {
     for (const loc of Object.keys(watchData)) {
-      if (watchData[loc]?.flatrate?.length > 0) return true;
+      if (
+        watchData[loc]?.flatrate?.length > 0 ||
+        watchData[loc]?.free?.length > 0 ||
+        watchData[loc]?.ads?.length > 0
+      ) return true;
     }
   }
 
@@ -1134,7 +1138,7 @@ function renderWatchProviders(details) {
 
   let detectedCountry = 'IN';
   try {
-    detectedCountry = (navigator.language || 'en-IN').split('-')[1]?.toUpperCase() || 'IN';
+    detectedCountry = detectWatchRegion(details.original_language);
   } catch (e) {
     console.error('Error detecting country:', e);
   }
@@ -1152,16 +1156,18 @@ function renderWatchProviders(details) {
     const countryResults = results[code];
     if (!countryResults) return;
 
-    // Flatrate (subscription)
-    if (countryResults.flatrate) {
-      countryResults.flatrate.forEach(p => {
-        const key = `${p.provider_id}-${p.provider_name}`;
-        if (!seenFlatrate.has(key)) {
-          seenFlatrate.add(key);
-          flatrateList.push({ ...p, country: code });
-        }
-      });
-    }
+    // Flatrate, Free, and Ads
+    ['flatrate', 'free', 'ads'].forEach(tier => {
+      if (countryResults[tier]) {
+        countryResults[tier].forEach(p => {
+          const key = `${p.provider_id}-${p.provider_name}`;
+          if (!seenFlatrate.has(key)) {
+            seenFlatrate.add(key);
+            flatrateList.push({ ...p, country: code });
+          }
+        });
+      }
+    });
 
     // Rent and Buy (transactional - e.g. YouTube Movies, Google Play, iTunes)
     ['rent', 'buy'].forEach(type => {
@@ -1202,6 +1208,7 @@ function renderWatchProviders(details) {
       const knownOtts = [
         { id: 8, name: 'Netflix' },
         { id: 9, name: 'Amazon Prime Video', alias: 'Amazon' },
+        { id: 9, name: 'Amazon Prime Video', alias: 'Prime Video' },
         { id: 315, name: 'Hoichoi', alias: 'SVF' },
         { id: 315, name: 'Hoichoi', alias: 'Eskay' },
         { id: 315, name: 'Hoichoi', alias: 'Surinder' },
@@ -1212,6 +1219,7 @@ function renderWatchProviders(details) {
         { id: 337, name: 'Disney+' },
         { id: 15, name: 'Hulu' },
         { id: 350, name: 'Apple TV+' },
+        { id: 350, name: 'Apple TV+', alias: 'Apple TV' },
         { id: 384, name: 'Max', alias: 'HBO' },
         { id: 386, name: 'Peacock' },
         { id: 531, name: 'Paramount+' },
@@ -1219,7 +1227,8 @@ function renderWatchProviders(details) {
         { id: 10002, name: 'Bioscope' },
         { id: 10003, name: 'Klikk' },
         { id: 10004, name: 'Addatimes' },
-        { id: 10005, name: 'Bongo' }
+        { id: 10005, name: 'Bongo' },
+        { id: 10005, name: 'Bongo', alias: 'Bongobd' }
       ];
 
       const allEntities = [...(details.networks || []), ...(details.production_companies || [])];

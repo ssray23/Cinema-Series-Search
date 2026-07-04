@@ -182,7 +182,7 @@ res['watch/providers'].results = {
 }
 ```
 
-We check **flatrate** only (subscription; no rent/buy).
+We check **flatrate**, **free**, and **ads** tiers (no rent/buy).
 
 ### Fallback: Production Company / Network Name Matching
 **When:** TMDb's `/watch/providers` returns empty or missing data
@@ -535,7 +535,7 @@ Cinema Search/
 ├── index.html              # App structure, all UI components, modal templates
 ├── app.js                  # All business logic, API calls, event listeners
 ├── styles.css              # Full design system, dark/light themes, animations
-├── server.py               # Lightweight Python HTTP server
+├── server.py               # Lightweight Python HTTP server (with strict no-cache headers for dev)
 ├── README.md               # User-facing documentation
 └── TECHNICAL_DESIGN.md     # This file
 ```

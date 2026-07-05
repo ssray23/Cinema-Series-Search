@@ -27,15 +27,16 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
                 import subprocess
                 try:
                     # Attempt to gracefully quit the macOS app wrapper so the Dock icon disappears
-                    subprocess.call(['osascript', '-e', 'quit app "Cinema Search"'], stderr=subprocess.DEVNULL)
+                    script = 'tell application "System Events" to if exists application process "Cinema Search" then tell application "Cinema Search" to quit'
+                    subprocess.call(['osascript', '-e', script], stderr=subprocess.DEVNULL, timeout=0.5)
                 except:
                     pass
                 os._exit(0)
             
-            # Start a 3 second countdown to shutdown. 
+            # Start a 1.5 second countdown to shutdown. 
             # If a ping or new request comes in (e.g. from another tab or a refresh), it will be cancelled.
             if shutdown_timer is None:
-                shutdown_timer = threading.Timer(3.0, terminate)
+                shutdown_timer = threading.Timer(1.5, terminate)
                 shutdown_timer.start()
             
             self.send_response(200)
@@ -65,7 +66,8 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
             def hard_terminate():
                 import subprocess
                 try:
-                    subprocess.call(['osascript', '-e', 'quit app "Cinema Search"'], stderr=subprocess.DEVNULL)
+                    script = 'tell application "System Events" to if exists application process "Cinema Search" then tell application "Cinema Search" to quit'
+                    subprocess.call(['osascript', '-e', script], stderr=subprocess.DEVNULL, timeout=0.5)
                 except:
                     pass
                 os._exit(0)

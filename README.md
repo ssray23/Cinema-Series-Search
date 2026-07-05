@@ -92,7 +92,7 @@ On first launch, a prompt will appear asking for your TMDb API key. Paste it in 
 ### Sorting
 Once results are shown, use the sort bar to reorder by:
 - ⭐ **Ranking** — TMDb vote average (with language-aware minimum vote thresholds)
-- 🔥 **Popularity** — TMDb popularity score
+- 🔥 **Popularity** — Most Reviewed (sorted by total number of votes/reviews)
 - 📅 **Release Date / First Air Date** — newest first
 
 ---
@@ -106,7 +106,7 @@ CineSearch uses an intelligent three-stage pipeline to balance **speed** (fewer 
 1. **Server-side pool selection**
    - **Ranking sort**: Fetch by popularity (not vote-average), avoiding the pathological tail of obscure 1-vote festival shorts
    - **Release Date sort**: Always fetch by true date order (newest-first)
-   - **Popularity sort**: Fetch by popularity (pass-through)
+   - **Popularity sort**: Fetch by vote_count to surface the most reviewed titles (pass-through)
 
 2. **Client-side filtering & verification**
    - Title fuzzy-match (when title is typed)
@@ -128,13 +128,13 @@ The `weightedRating()` function (line 456) ensures low-vote titles don't get hid
 function weightedRating(item) {
   const voteCount = item.vote_count || 0;
   const voteAverage = item.vote_average || 0;
-  const minVotes = currentMode === 'tv' ? 5 : 50;
+  const minVotes = currentMode === 'tv' ? 5 : 15;
   if (voteCount >= minVotes) return voteAverage;
   return voteAverage * (voteCount / minVotes);
 }
 ```
 
-Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 × (2/5) = 3.6`, ranking lower than a **5,000-vote 8.0** average (which scores as `8.0`). But the 2-vote title still **appears** — it's not hidden, just re-ranked fairly.
+Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 × (2/15) = 1.2`, ranking lower than a **5,000-vote 8.0** average (which scores as `8.0`). But the 2-vote title still **appears** — it's not hidden, just re-ranked fairly.
 
 ### Hybrid Search Endpoints
 

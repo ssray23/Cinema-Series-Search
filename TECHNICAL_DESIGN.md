@@ -87,7 +87,7 @@ params = {
   with_genres: genreId1|genreId2,  // pipe = OR query
   with_original_language: language,
   primary_release_year: year,
-  sort_by: 'popularity.desc' or 'vote_average.desc' or 'primary_release_date.desc',
+  sort_by: 'vote_count.desc' or 'vote_average.desc' or 'primary_release_date.desc',
   page, include_adult: false
 }
 ```
@@ -129,8 +129,8 @@ const maxAutoFetch = ottOnly ? 25 : 10;
 while (newResults.length < 15 && autoFetchAttempts < maxAutoFetch) { ... }
 ```
 
-#### **Popularity Sort**
-- Pass through as-is; TMDb's popularity is already a robust, broad metric
+#### **Popularity Sort (vote_count.desc)**
+- Replaced TMDb's native `popularity.desc` (which favors recent/unvoted releases) with `vote_count.desc` to align with the human expectation that "Popularity" means "Most Reviewed".
 
 ### Auto-Pagination Loop
 ```javascript
@@ -211,7 +211,7 @@ for (const company of movieData.production_companies) {
 function weightedRating(item) {
   const voteCount = item.vote_count || 0;
   const voteAverage = item.vote_average || 0;
-  const minVotes = currentMode === 'tv' ? 5 : 50;
+  const minVotes = currentMode === 'tv' ? 5 : 15;
   
   if (voteCount >= minVotes) return voteAverage;  // High confidence: use raw rating
   return voteAverage * (voteCount / minVotes);     // Low confidence: dampen
@@ -220,8 +220,8 @@ function weightedRating(item) {
 
 **Example:**
 - **Title A:** 5,000 votes, 8.0 average → `8.0` (above threshold)
-- **Title B:** 2 votes, 9.0 average → `9.0 × (2/50) = 0.36` (dampened)
-- **Ranking order:** A beats B (8.0 > 0.36)
+- **Title B:** 2 votes, 9.0 average → `9.0 × (2/15) = 1.2` (dampened)
+- **Ranking order:** A beats B (8.0 > 1.2)
 - **Visibility:** B still appears in results; not hidden
 
 **Philosophy:** Low-vote titles are re-ranked fairly, not excluded. A fresh OTT original with minimal votes can still surface if the user navigates through all results.
@@ -237,10 +237,10 @@ if (currentSort === 'vote_average.desc') {
 }
 ```
 
-### Popularity (popularity.desc)
+### Popularity (vote_count.desc)
 ```javascript
-else if (currentSort === 'popularity.desc') {
-  activeSearchResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+else if (currentSort === 'vote_count.desc') {
+  activeSearchResults.sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
 }
 ```
 
@@ -275,7 +275,7 @@ if (titleQuery) {
 ### Global Variables
 ```javascript
 let currentMode = 'movie';           // 'movie' or 'tv'
-let currentSort = 'vote_average.desc';  // 'vote_average.desc', 'popularity.desc', 'primary_release_date.desc'
+let currentSort = 'vote_average.desc';  // 'vote_average.desc', 'vote_count.desc', 'primary_release_date.desc'
 let currentPage = 1;                 // Current pagination page
 let totalPages = 1;                  // Total pages from TMDb (for pagination UI)
 let totalResults = 0;                // Total result count from TMDb

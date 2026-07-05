@@ -421,6 +421,13 @@ pill.addEventListener('click', (e) => {
 });
 ```
 
+### Server Lifecycle Management
+The `server.py` Python process manages its own lifecycle using a heartbeat and unload beacon to ensure clean termination when the application is closed.
+- **Unload Beacon:** When a browser tab is closed (`pagehide` event), `app.js` sends a `POST /unload` request using `navigator.sendBeacon`.
+- **Grace Period Timer:** The server starts a 3.0-second timer upon receiving the `/unload` request.
+- **Heartbeat:** `app.js` sends a `GET /ping` every 2 seconds. If a page refresh occurs, the fresh page load will send a ping that cancels the 3.0-second timer. If multiple tabs are open, the remaining tabs' heartbeats will also cancel the timer, preventing premature shutdown.
+- **Clean OS Termination:** If the timer expires (all tabs closed), `server.py` executes an AppleScript command (`osascript -e 'quit app "Cinema Search"'`) to cleanly terminate the macOS Application bundle wrapper (removing the Dock icon) before calling `os._exit(0)`.
+
 ---
 
 ## Performance Optimizations

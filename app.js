@@ -406,14 +406,30 @@ function checkHasStreamProviders(movieData) {
     'chorki', 'bioscope', 'addatimes', 'klikk', 'bongo', 'bongobd', 'svf', 'eskay', 'surinder'
   ];
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const releaseStr = movieData.release_date || movieData.first_air_date;
+  const isFutureRelease = releaseStr && releaseStr > todayStr;
+
+  let isRecentMovie = false;
+  if (currentMode === 'movie' && releaseStr && !isFutureRelease) {
+    const releaseDate = new Date(releaseStr);
+    const today = new Date();
+    const diffDays = (today - releaseDate) / (1000 * 60 * 60 * 24);
+    if (diffDays >= 0 && diffDays < 60) {
+      isRecentMovie = true;
+    }
+  }
+
   const networks = movieData.networks || [];
   for (const n of networks) {
     if (n.name && knownOttKeywords.some(ott => matchesOttKeyword(n.name, ott))) return true;
   }
 
-  const companies = movieData.production_companies || [];
-  for (const c of companies) {
-    if (c.name && knownOttKeywords.some(ott => matchesOttKeyword(c.name, ott))) return true;
+  if (currentMode === 'tv' || !isRecentMovie) {
+    const companies = movieData.production_companies || [];
+    for (const c of companies) {
+      if (c.name && knownOttKeywords.some(ott => matchesOttKeyword(c.name, ott))) return true;
+    }
   }
 
   const homepage = movieData.homepage || '';
@@ -1211,6 +1227,16 @@ function renderWatchProviders(details) {
     const releaseStr = details.release_date || details.first_air_date;
     const isFutureRelease = releaseStr && releaseStr > todayStr;
 
+    let isRecentMovie = false;
+    if (currentMode === 'movie' && releaseStr && !isFutureRelease) {
+      const releaseDate = new Date(releaseStr);
+      const today = new Date();
+      const diffDays = (today - releaseDate) / (1000 * 60 * 60 * 24);
+      if (diffDays >= 0 && diffDays < 60) {
+        isRecentMovie = true;
+      }
+    }
+
     if (flatrateList.length === 0 && !isFutureRelease) {
       // Smart Fallback: If JustWatch dropped the ball, check networks/production companies for known OTTs
       const knownOtts = [
@@ -1239,7 +1265,10 @@ function renderWatchProviders(details) {
         { id: 10005, name: 'Bongo', alias: 'Bongobd' }
       ];
 
-      const allEntities = [...(details.networks || []), ...(details.production_companies || [])];
+      const allEntities = [...(details.networks || [])];
+      if (currentMode === 'tv' || !isRecentMovie) {
+        allEntities.push(...(details.production_companies || []));
+      }
       let fallbackFound = false;
       
       for (const entity of allEntities) {
@@ -1288,6 +1317,8 @@ function renderWatchProviders(details) {
     if (flatrateList.length === 0) {
       if (isFutureRelease) {
         container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms (unreleased).</span>';
+      } else if (isRecentMovie) {
+        container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms (likely in theaters).</span>';
       } else {
         container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms.</span>';
       }
@@ -1350,8 +1381,8 @@ function renderWatchProviders(details) {
     // and language suffix to keep the query broad. This allows Google's spelling corrector
     // to handle transliteration differences (like Aajo vs Ajo) and match pages successfully.
     const query = domain
-      ? `${cleanTitle} site:${domain}`.replace(/\s+/g, ' ').trim()
-      : `${cleanTitle} ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
+      ? `"${cleanTitle}" site:${domain}`.replace(/\s+/g, ' ').trim()
+      : `"${cleanTitle}" ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 
@@ -1853,3 +1884,14 @@ function init() {
 
 // Start application
 document.addEventListener('DOMContentLoaded', init);
+
+// --- Server Lifecycle Management ---
+// Heartbeat and unload logic to automatically shutdown the local Python server
+// when the app is closed, but keep it alive across refreshes or multiple tabs.
+setInterval(() => {
+  fetch('/ping').catch(() => {});
+}, 2000);
+
+window.addEventListener('pagehide', () => {
+  navigator.sendBeacon('/unload');
+});

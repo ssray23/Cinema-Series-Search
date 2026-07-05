@@ -504,7 +504,8 @@ function detectWatchRegion(lang) {
 function weightedRating(item) {
   const voteCount = item.vote_count || 0;
   const voteAverage = item.vote_average || 0;
-  const minVotes = currentMode === 'tv' ? 5 : 50;
+  // Lowered from 50 to 15 to be fairer to regional cinema (e.g. Bengali) which inherently has fewer TMDb votes
+  const minVotes = currentMode === 'tv' ? 5 : 15;
   if (voteCount >= minVotes) return voteAverage;
   return voteAverage * (voteCount / minVotes);
 }
@@ -515,8 +516,8 @@ function weightedRating(item) {
 function compareBySort(a, b) {
   if (currentSort === 'vote_average.desc') {
     return weightedRating(b) - weightedRating(a);
-  } else if (currentSort === 'popularity.desc') {
-    return (b.popularity || 0) - (a.popularity || 0);
+  } else if (currentSort === 'vote_count.desc') {
+    return (b.vote_count || 0) - (a.vote_count || 0);
   } else if (currentSort === 'primary_release_date.desc') {
     return new Date(b.release_date || b.first_air_date || 0) - new Date(a.release_date || a.first_air_date || 0);
   }
@@ -947,13 +948,15 @@ function renderMovies(movies) {
     }
       
     const ratingVal = movie.vote_average ? movie.vote_average.toFixed(1) : 'NR';
+    const voteCount = movie.vote_count || 0;
+    const voteSpan = voteCount > 0 ? `<span style="font-size: 0.7em; opacity: 0.7; font-weight: 500; margin-left: 2px;">(${voteCount >= 1000 ? (voteCount/1000).toFixed(1) + 'k' : voteCount})</span>` : '';
     
     card.innerHTML = `
       <div class="movie-poster-box">
         <img src="${posterUrl}" alt="${movie.title || movie.name}" loading="lazy">
         <div class="movie-rating">
           <i data-lucide="star" class="fill-gold"></i>
-          <span>${ratingVal}</span>
+          <span>${ratingVal}</span>${voteSpan}
         </div>
       </div>
       <div class="movie-info">

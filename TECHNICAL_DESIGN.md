@@ -184,7 +184,7 @@ res['watch/providers'].results = {
 
 We check **flatrate**, **free**, and **ads** tiers (no rent/buy).
 
-### Fallback: Production Company / Network Name Matching
+### Fallback 1: Production Company / Network Name Matching
 **When:** TMDb's `/watch/providers` returns empty or missing data
 
 **Logic:** Check the movie's `production_companies` and `networks` arrays for known OTT keywords:
@@ -196,6 +196,11 @@ for (const company of movieData.production_companies) {
 ```
 
 **Word-boundary matching:** `matchesOttKeyword('Maximilian Films Ltd.', 'max')` → **false** (substring inside a longer word). `matchesOttKeyword('HBO Max Films', 'max')` → **true** (word boundary respected).
+
+### Fallback 2: Homepage Domain Matching
+**When:** The previous fallback finds nothing, but the movie has an official `homepage`.
+
+**Logic:** Check if the movie's `homepage` URL contains the domain name or alias of any known OTT platform. Streaming exclusives often use their direct viewing URL as the official homepage (e.g., `www.zee5.com/movies/...`).
 
 ---
 

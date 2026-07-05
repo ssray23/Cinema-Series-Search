@@ -416,6 +416,14 @@ function checkHasStreamProviders(movieData) {
     if (c.name && knownOttKeywords.some(ott => matchesOttKeyword(c.name, ott))) return true;
   }
 
+  const homepage = movieData.homepage || '';
+  if (homepage) {
+    const lowerHome = homepage.toLowerCase();
+    if (knownOttKeywords.some(ott => lowerHome.includes(ott.replace(/\s+/g, '').replace('+', '')))) {
+      return true;
+    }
+  }
+
   console.log("checkHasStreamProviders: No stream providers found for", movieData.name || movieData.title, movieData);
   return false;
 }
@@ -1232,6 +1240,7 @@ function renderWatchProviders(details) {
       ];
 
       const allEntities = [...(details.networks || []), ...(details.production_companies || [])];
+      let fallbackFound = false;
       
       for (const entity of allEntities) {
         if (!entity.name) continue;
@@ -1248,6 +1257,28 @@ function renderWatchProviders(details) {
               country: 'Global'
             });
             seenFlatrate.add(`${ott.id}-${entity.name}`);
+            fallbackFound = true;
+            break;
+          }
+        }
+        if (fallbackFound) break;
+      }
+
+      if (!fallbackFound && details.homepage) {
+        const lowerHome = details.homepage.toLowerCase();
+        for (const ott of knownOtts) {
+          const domainName = ott.name.toLowerCase().replace(/\s+/g, '').replace('+', '');
+          const aliasDomain = ott.alias ? ott.alias.toLowerCase().replace(/\s+/g, '').replace('+', '') : null;
+          
+          if (lowerHome.includes(domainName) || (aliasDomain && lowerHome.includes(aliasDomain))) {
+            flatrateList.push({
+              provider_id: ott.id,
+              provider_name: ott.name,
+              logo_path: null,
+              country: 'Global'
+            });
+            seenFlatrate.add(`${ott.id}-${ott.name}`);
+            fallbackFound = true;
             break;
           }
         }

@@ -416,7 +416,7 @@ const PROVIDER_DOMAINS = {
 
 pill.addEventListener('click', (e) => {
   const domain = PROVIDER_DOMAINS[providerId];
-  const url = `https://google.com/search?q=site:${domain} "${title}"`;
+  const url = `https://google.com/search?q=site:${domain} ${title}`;
   window.open(url, '_blank');
 });
 ```

@@ -1384,8 +1384,8 @@ function renderWatchProviders(details) {
     // and language suffix to keep the query broad. This allows Google's spelling corrector
     // to handle transliteration differences (like Aajo vs Ajo) and match pages successfully.
     const query = domain
-      ? `"${cleanTitle}" site:${domain}`.replace(/\s+/g, ' ').trim()
-      : `"${cleanTitle}" ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
+      ? `${cleanTitle} site:${domain}`.replace(/\s+/g, ' ').trim()
+      : `${cleanTitle} ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 

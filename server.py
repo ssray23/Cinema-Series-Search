@@ -79,7 +79,8 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
             keys = {
                 'TMDB_API_KEY': '',
                 'WATCHMODE_API_KEY': '',
-                'GEMINI_API_KEY': ''
+                'GEMINI_API_KEY': '',
+                'ANTHROPIC_API_KEY': ''
             }
             if os.path.exists(env_path):
                 with open(env_path, 'r') as f:

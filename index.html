@@ -46,8 +46,15 @@
             <input type="password" id="gemini-key-input" placeholder="e.g. AIzaSy... (Used as final fallback)" autocomplete="off">
           </div>
         </div>
+        <div class="input-group" style="margin-top: 1rem;">
+          <label for="anthropic-key-input">Anthropic API Key <span style="font-weight: normal; color: var(--text-muted);">(AI Prediction fallback if Gemini rate-limits)</span></label>
+          <div class="input-with-icon">
+            <i data-lucide="lock"></i>
+            <input type="password" id="anthropic-key-input" placeholder="e.g. sk-ant-api03-..." autocomplete="off">
+          </div>
+        </div>
         <div class="api-help">
-          <p>Don't have keys? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">TMDb Key</a> | <a href="https://v2.api.watchmode.com/" target="_blank" rel="noopener noreferrer">Watchmode Key</a> | <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Gemini Key</a></p>
+          <p>Don't have keys? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">TMDb Key</a> | <a href="https://v2.api.watchmode.com/" target="_blank" rel="noopener noreferrer">Watchmode Key</a> | <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Gemini Key</a> | <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic Key</a></p>
         </div>
         <button type="submit" class="btn btn-primary btn-full">
           <span>Save API Key</span>

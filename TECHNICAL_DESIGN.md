@@ -183,7 +183,38 @@ res['watch/providers'].results = {
 
 We check **flatrate**, **free**, and **ads** tiers (no rent/buy).
 
-### Fallback 1: Production Company / Network Name Matching
+### Fallback 1: Watchmode API
+If TMDb's watch providers returns empty, the app queries the Watchmode API via a two-step flow:
+1. Search Watchmode for the TMDb movie ID to get a Watchmode title ID
+2. Fetch streaming sources from Watchmode for that title ID
+
+### Fallback 2: Gemini AI (Google Search Grounding)
+If both TMDb and Watchmode return no flatrate options, `predictOttWithGemini(details)` is called:
+- Uses **Gemini 2.5 Flash** with `googleSearch` grounding tool enabled
+- Prompt includes: title, exact release date, language code, and overview
+- Prompt is tuned for Indian OTT patterns: Hindi/Tamil/Telugu/Bengali films frequently hit OTT within days of theatrical release
+- Returns one of: a platform name from the allowed list, `"Unreleased"`, or `"None"`
+- If the response is `"None"` or `"Unreleased"`, the function returns `null`
+
+### Fallback 3: Anthropic Claude (Rate-Limit Failover)
+If Gemini returns HTTP 429 (rate limit exceeded), the app **automatically retries** with `predictOttWithClaude(details)`:
+- Uses **Claude claude-haiku-4-5** via the Anthropic Messages API
+- Identical prompt to the Gemini call
+- Requires the `anthropic-dangerous-direct-browser-access: true` header (browser-to-API direct call)
+- If no Gemini key is configured but an Anthropic key is, Claude is used as the primary AI predictor
+
+```javascript
+if (geminiApiKey) {
+  aiPrediction = await predictOttWithGemini(details);
+  if (aiPrediction === 'RATE_LIMIT_EXCEEDED' && anthropicApiKey) {
+    aiPrediction = await predictOttWithClaude(details);  // Auto-fallback
+  }
+} else if (anthropicApiKey) {
+  aiPrediction = await predictOttWithClaude(details);    // Primary if no Gemini
+}
+```
+
+### Fallback 4: Production Company / Network Name Matching
 **When:** TMDb's `/watch/providers` returns empty or missing data
 
 **Logic:** Check the movie's `production_companies` and `networks` arrays for known OTT keywords:
@@ -196,7 +227,7 @@ for (const company of movieData.production_companies) {
 
 **Word-boundary matching:** `matchesOttKeyword('Maximilian Films Ltd.', 'max')` → **false** (substring inside a longer word). `matchesOttKeyword('HBO Max Films', 'max')` → **true** (word boundary respected).
 
-### Fallback 2: Homepage Domain Matching
+### Fallback 5: Homepage Domain Matching
 **When:** The previous fallback finds nothing, but the movie has an official `homepage`.
 
 **Logic:** Check if the movie's `homepage` URL contains the domain name or alias of any known OTT platform. Streaming exclusives often use their direct viewing URL as the official homepage (e.g., `www.zee5.com/movies/...`).
@@ -553,14 +584,46 @@ Cinema Search/
 
 ---
 
+## Short Film & Special Exclusion
+
+All movie-mode results go through `isLikelyTvSeriesOrSpecial(movie)` before being added to the results list. This function returns `true` (exclude) for:
+
+1. **TMDb genre 10770** (TV Movie)
+2. **Title keywords** — episode/season/series patterns, `stand-up`, `comedy special`, `comedy show`
+3. **S01E01-style numbering** in the title
+4. **Overview keywords** — `television series`, `tv show`, `stand-up comedy`, `stand-up special`, `comedy special`, `in this special`, `in his special`, `in her special`, `comedy concert`, etc.
+5. **Structural heuristic** — title contains `:` AND `genre_ids` is empty. Real films always have genres; event specials (e.g. "Munawar Faruqui: Dhandho") often don't.
+6. **Runtime gate** — `runtime > 0 && runtime < 40` minutes. Catches misclassified shorts TMDb labels as "Feature Film".
+
+Additionally, discover/movie API calls always send:
+- `without_genres=10755` — excludes TMDb's "Short" genre server-side
+- `with_runtime.gte=40` — enforces minimum 40-minute runtime server-side
+
+---
+
+## Year Spinner UX
+
+The Release Year `<input type="number">` keeps `min="1900"` (to allow navigating to any past year), but a JS `mousedown` + `keydown` listener pre-fills the field with the current year the moment the spinner is interacted with on an empty field. This means the spinner starts at the current year by default while preserving full backward navigation.
+
+```javascript
+const _prefillYear = () => { if (!yearInput.value) yearInput.value = new Date().getFullYear(); };
+yearInput.addEventListener('mousedown', _prefillYear);
+yearInput.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') _prefillYear();
+});
+```
+
+---
+
 ## References
 
 - [TMDb API Documentation](https://developer.themoviedb.org/docs)
+- [Anthropic Messages API](https://docs.anthropic.com/en/api/messages)
 - [MDN: Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
 - [MDN: LocalStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
 - [ISO 3166-1 Country Codes](https://en.wikipedia.org/wiki/ISO_3166-1)
 
 ---
 
-**Last Updated:** July 3, 2026  
-**Version:** 1.0
+**Last Updated:** July 11, 2026  
+**Version:** 1.1

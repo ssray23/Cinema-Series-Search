@@ -7,14 +7,14 @@ A sleek, premium movie and TV series discovery web app powered by [The Movie Dat
 ## ✨ Features
 
 ### 📺 Dual Mode Discovery
-- **Cinema / Movies** — Browse feature films, blockbusters, and indie movies.
+- **Cinema / Movies** — Browse feature films, blockbusters, and indie movies. Short films (under 40 min), stand-up comedy specials, and TV specials are automatically excluded.
 - **Series / TV Shows** — Discover TV series, reality shows, anime, and mini-series.
 - **Dynamic UI Adapting** — Toggle between modes to automatically shift the interface background gradients (soft pastel CMYK red for Cinema mode, teal-ish blue for Series mode), control button outlines, genres, search placeholders, and TMDB discovery queries.
 
 ### 🔍 Smart Search
 - **Title / Keyword** — Type any title or keyword and results update automatically as you type (debounced to avoid API spam).
 - **Actor & Actress** — Real-time autocomplete with profile photo suggestions. Select both to find their collaborative titles together.
-- **Release Year / First Air Date** — Filter by a specific year.
+- **Release Year / First Air Date** — Filter by a specific year. The up/down spinner starts from the current year for convenience while still allowing navigation to past years.
 - **Original Language** — Filter by the title's original production language (Hindi, Bengali, English, French, Japanese, etc.).
 - **Dynamic Genres** — Filter by genres matching the active mode (e.g. Clapperboard updates dynamically to Movie genres or TV genres).
 
@@ -45,10 +45,11 @@ The app intelligently switches between two TMDb API pipelines:
 
 ### Step 1 — Get Your Free API Keys
 
-CineSearch requires three free API keys to function fully:
+CineSearch requires up to four API keys to function fully:
 1. **TMDb API Key** (Core metadata): Sign up at [themoviedb.org](https://www.themoviedb.org/) → Account Settings → API.
 2. **Watchmode API Key** (Primary streaming data): Sign up at [watchmode.com](https://api.watchmode.com/).
 3. **Gemini API Key** (AI fallback prediction): Get a free key at [Google AI Studio](https://aistudio.google.com/).
+4. **Anthropic API Key** (Secondary AI fallback — used automatically if Gemini rate-limits): Get a key at [console.anthropic.com](https://console.anthropic.com/settings/keys).
 
 ### Step 2 — Configure the `.env` File
 In the root directory of the project, create or edit the `.env` file and paste your keys:
@@ -56,8 +57,9 @@ In the root directory of the project, create or edit the `.env` file and paste y
 TMDB_API_KEY=your_tmdb_key_here
 WATCHMODE_API_KEY=your_watchmode_key_here
 GEMINI_API_KEY=your_gemini_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
 ```
-*Note: The app will gracefully degrade if the Watchmode or Gemini keys are missing, but the TMDb key is required.*
+*Note: The app will gracefully degrade if Watchmode, Gemini, or Anthropic keys are missing, but the TMDb key is required. If Gemini hits its rate limit, the app automatically retries the prediction with Claude.*
 
 ### Step 3 — Launch the App
 
@@ -120,13 +122,14 @@ CineSearch uses an intelligent three-stage pipeline to balance **speed** (fewer 
    - The fetch loop targets **15+ results per page** and stops after max 10 pages of attempts.
    - **Important**: The loop accumulates results *in sort order* — when filtering strips a page, the next page's newest or highest-rated titles still preserve their intended order
 
-### 🤖 Tri-API OTT Discovery Fallback
+### 🤖 Quad-API OTT Discovery Fallback
 
-Finding accurate streaming rights (especially for regional and newly released titles) is notoriously difficult. CineSearch implements a robust three-stage fallback system when you click a title card:
+Finding accurate streaming rights (especially for regional and newly released titles) is notoriously difficult. CineSearch implements a robust four-stage fallback system when you click a title card:
 
 1. **TMDb Provider API**: Fast and native. If TMDb knows where it's streaming, it displays the pills immediately.
 2. **Watchmode API (Fallback 1)**: If TMDb fails, the app automatically queries Watchmode's API, which often has more up-to-date data for obscure titles.
-3. **Gemini AI with Google Search Grounding (Fallback 2)**: If both databases return zero flatrate streaming options, CineSearch asks Gemini 2.5 Flash to predict the most likely platform. By utilizing **Google Search Grounding**, the AI actively searches the live internet for recent news articles regarding the film's streaming rights (e.g. "Zee5 acquires rights for...") rather than blindly guessing, giving you the most accurate real-time prediction possible!
+3. **Gemini AI with Google Search Grounding (Fallback 2)**: If both databases return zero flatrate streaming options, CineSearch asks Gemini 2.5 Flash to predict the most likely platform. Using **Google Search Grounding**, the AI actively searches the live internet for streaming deal announcements rather than blindly guessing.
+4. **Anthropic Claude (Fallback 3)**: If Gemini hits its rate limit (HTTP 429), the app automatically retries the prediction using Claude (claude-haiku-4-5) — no user action required. The AI prompt is tuned specifically for Indian OTT patterns, knowing that Hindi/Telugu/Tamil films often hit streaming platforms within days of theatrical release.
 
 ### Ranking Without Exclusion
 
@@ -177,3 +180,7 @@ Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 
 - **Python 3** (pre-installed on all modern Macs) — used to run the local server
 - A modern browser (Safari, Chrome, Firefox)
 - A free [TMDb API key](https://www.themoviedb.org/settings/api)
+
+---
+
+*Last updated: July 11, 2026*

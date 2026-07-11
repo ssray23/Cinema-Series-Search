@@ -58,6 +58,7 @@ const TV_GENRES = `
 let tmdbApiKey = '';
 let watchmodeApiKey = '';
 let geminiApiKey = '';
+let anthropicApiKey = '';
 
 let selectedActorId = null;
 let selectedActressId = null;
@@ -76,6 +77,7 @@ const apiKeyForm = document.getElementById('api-key-form');
 const apiKeyInput = document.getElementById('api-key-input');
 const watchmodeKeyInput = document.getElementById('watchmode-key-input');
 const geminiKeyInput = document.getElementById('gemini-key-input');
+const anthropicKeyInput = document.getElementById('anthropic-key-input');
 const changeKeyBtn = document.getElementById('change-key-btn');
 const shutdownBtn = document.getElementById('shutdown-btn');
 const shutdownOverlay = document.getElementById('shutdown-overlay');
@@ -87,6 +89,17 @@ const titleClearBtn = document.getElementById('title-clear-btn');
 
 const searchForm = document.getElementById('search-form');
 const yearInput = document.getElementById('year-input');
+// When the year spinner is used on an empty field, pre-fill with the current year
+// so the arrows start at today's year rather than 1900, while still allowing
+// the user to arrow down to past years (min stays at 1900).
+if (yearInput) {
+  const _currentYear = new Date().getFullYear();
+  const _prefillYear = () => { if (!yearInput.value) yearInput.value = _currentYear; };
+  yearInput.addEventListener('mousedown', _prefillYear);
+  yearInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') _prefillYear();
+  });
+}
 const languageSelect = document.getElementById('language-select');
 const genreSelect = document.getElementById('genre-select');
 const clearBtn = document.getElementById('clear-btn');
@@ -271,14 +284,20 @@ async function predictOttWithGemini(details) {
   const lang = details.original_language;
   const overview = details.overview || '';
   
-  const prompt = `You are an expert in cinema distribution. The movie or series "${title}" (Year: ${year}, Language code: ${lang}) has no streaming data available in APIs.
+  const releaseDate = details.release_date || details.first_air_date || '';
+  const prompt = `You are an expert in OTT and cinema distribution, with deep knowledge of Indian streaming platforms.
+The movie/series "${title}" (Released: ${releaseDate || year}, Language: ${lang}) has no streaming data in APIs yet.
 Overview: ${overview}
 
-Predict the single most likely streaming platform it is on right now. 
-Only choose from this list: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
-If it is a theatrical movie that just released and hasn't hit streaming yet, reply "Unreleased".
-If you believe it is highly unlikely to be available on any of these platforms, reply "None".
-Return ONLY the exact name of the platform from the list, "Unreleased", or "None". Do not explain your reasoning.`;
+Task: Predict the single most likely OTT platform it is streaming on RIGHT NOW.
+Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+
+IMPORTANT CONTEXT:
+- Indian films (hi/ta/te/ml/kn/bn/pa) very frequently premiere on OTT within days or even simultaneously with theatrical release — being recently released does NOT mean it's unavailable on streaming.
+- Use Google Search to find the actual streaming platform for this specific title if you know it.
+- Only reply "Unreleased" if the film is clearly still in theatres with NO known OTT deal announced.
+- Only reply "None" if it is highly unlikely to be on any of these platforms.
+Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
@@ -306,6 +325,62 @@ Return ONLY the exact name of the platform from the list, "Unreleased", or "None
   } catch (error) {
     console.error('Gemini Prediction Error:', error);
     if (error.message && error.message.includes('429')) return 'RATE_LIMIT_EXCEEDED';
+    return null;
+  }
+}
+
+/**
+ * Predict OTT platform using Claude (Anthropic) AI — used as fallback when Gemini rate-limits.
+ */
+async function predictOttWithClaude(details) {
+  if (!anthropicApiKey) return null;
+
+  const title = details.title || details.name;
+  const year = (details.release_date || details.first_air_date || '').split('-')[0];
+  const lang = details.original_language;
+  const overview = details.overview || '';
+  const releaseDate = details.release_date || details.first_air_date || '';
+
+  const prompt = `You are an expert in OTT and cinema distribution, with deep knowledge of Indian streaming platforms.
+The movie/series "${title}" (Released: ${releaseDate || year}, Language: ${lang}) has no streaming data in APIs yet.
+Overview: ${overview}
+
+Task: Predict the single most likely OTT platform it is streaming on RIGHT NOW.
+Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+
+IMPORTANT CONTEXT:
+- Indian films (hi/ta/te/ml/kn/bn/pa) very frequently premiere on OTT within days or even simultaneously with theatrical release — being recently released does NOT mean it's unavailable on streaming.
+- Only reply "Unreleased" if the film is clearly still in theatres with NO known OTT deal announced.
+- Only reply "None" if it is highly unlikely to be on any of these platforms.
+- Use your knowledge of known streaming deals and OTT acquisition patterns.
+Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicApiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 64,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`Anthropic API error: ${response.status}`);
+    const data = await response.json();
+
+    if (data.content && data.content[0] && data.content[0].text) {
+      const prediction = data.content[0].text.trim();
+      return (prediction === 'None' || prediction === 'Unreleased') ? null : prediction;
+    }
+    return null;
+  } catch (error) {
+    console.error('Anthropic Prediction Error:', error);
     return null;
   }
 }
@@ -351,7 +426,7 @@ function isLikelyTvSeriesOrSpecial(movie) {
   }
   
   // 2. Filter out TV episode / season / series formats in the title
-  const episodePattern = /\b(episode|season|tv series|tv show|television series|web series|miniseries|mini-series|talk show|game show|reality show)\b/i;
+  const episodePattern = /\b(episode|season|tv series|tv show|television series|web series|miniseries|mini-series|talk show|game show|reality show|stand-up|stand up|comedy special|comedy show)\b/i;
   if (episodePattern.test(title)) {
     return true;
   }
@@ -361,7 +436,7 @@ function isLikelyTvSeriesOrSpecial(movie) {
     return true;
   }
   
-  // 3. Filter out items whose overview contains TV show / live show indicators
+  // 3. Filter out items whose overview contains TV show / live show / stand-up special indicators
   const tvKeywords = [
     'television series',
     'tv series',
@@ -378,6 +453,24 @@ function isLikelyTvSeriesOrSpecial(movie) {
     'based on the tv show',
     'improvised comedy special',
     'live comedy special',
+    'stand-up comedy',
+    'stand up comedy',
+    'stand-up special',
+    'stand up special',
+    'comedy special',
+    'stand-up comedian',
+    'stand up comedian',
+    'stand-up comic',
+    'standup comedy',
+    // Catches overviews like "In this special, [person] shares..."
+    'in this special',
+    'in his special',
+    'in her special',
+    'his comedy special',
+    'her comedy special',
+    'this comedy special',
+    'comedy concert',
+    'comedy tour',
     'unscripted live',
     'ucb theatre',
     'upright citizens brigade',
@@ -390,6 +483,23 @@ function isLikelyTvSeriesOrSpecial(movie) {
   
   // 4. Specific titles or keywords in title
   if (title === 'house of lies live' || (title.includes('house of lies') && title.includes('live'))) {
+    return true;
+  }
+
+  // 4b. "PersonName: Title" with NO genre tags = almost certainly a performance special,
+  // not a real film. Legitimate movies with colons (e.g. "Mission: Impossible") always
+  // have genres set. TMDb returns genre_ids:[] for event-style specials like
+  // "Munawar Faruqui: Dhandho".
+  const hasColon = title.includes(':');
+  const hasNoGenres = !movie.genre_ids || movie.genre_ids.length === 0;
+  if (hasColon && hasNoGenres) {
+    return true;
+  }
+
+  // 5. Filter by runtime — anything under 40 minutes is a short film, not a feature.
+  // TMDb sometimes misclassifies shorts (e.g. 8-min or 14-min films) as "Feature Film",
+  // so this acts as a hard runtime gate independent of genre tags.
+  if (typeof movie.runtime === 'number' && movie.runtime > 0 && movie.runtime < 40) {
     return true;
   }
   
@@ -620,6 +730,14 @@ async function discoverMovies() {
     language: 'en-US'
   };
 
+  // Always exclude Short films (TMDb genre ID 10755) from movie discover results.
+  // Also enforce a minimum runtime of 40 minutes to catch shorts that TMDb doesn't
+  // tag with the Short genre (e.g. 8-min or 14-min films misclassified as "Feature Film").
+  if (currentMode === 'movie') {
+    params.without_genres = '10755';
+    params['with_runtime.gte'] = 40;
+  }
+
   // If sorting is by popularity or release date, pass to TMDb discover.
   // Note: search/movie and search/tv endpoints don't support sort_by.
   if (currentSort) {
@@ -706,8 +824,12 @@ async function discoverMovies() {
       let pageResults = data.results || [];
       
       // Exclude TV series, episodes, and specials to ensure only movies are listed
+      // Also exclude short films (genre ID 10755) in search mode (discover already excludes them server-side)
       if (currentMode === 'movie') {
         pageResults = pageResults.filter(movie => !isLikelyTvSeriesOrSpecial(movie));
+        if (isSearchMode) {
+          pageResults = pageResults.filter(movie => !movie.genre_ids || !movie.genre_ids.includes(10755));
+        }
       }
       
       
@@ -1356,11 +1478,20 @@ async function renderWatchProviders(details) {
 
         // If STILL empty after Watchmode (or if Watchmode wasn't queried)
         if (flatrateList.length === 0) {
-          // Check Gemini AI first
+          // Try Gemini AI first, fall back to Anthropic Claude if Gemini rate-limits
           let aiPrediction = null;
           if (geminiApiKey) {
             container.innerHTML = '<div class="spinner" style="display:inline-block; margin-right:0.5rem; width:14px; height:14px;"></div><span class="text-muted">Asking AI...</span>';
             aiPrediction = await predictOttWithGemini(details);
+            if (aiPrediction === 'RATE_LIMIT_EXCEEDED' && anthropicApiKey) {
+              console.log('Gemini rate-limited — falling back to Anthropic Claude.');
+              aiPrediction = await predictOttWithClaude(details);
+            } else if (aiPrediction === 'RATE_LIMIT_EXCEEDED') {
+              aiPrediction = null;
+            }
+          } else if (anthropicApiKey) {
+            container.innerHTML = '<div class="spinner" style="display:inline-block; margin-right:0.5rem; width:14px; height:14px;"></div><span class="text-muted">Asking AI...</span>';
+            aiPrediction = await predictOttWithClaude(details);
           }
 
           const hasEmptyProviderData = !results || Object.keys(results).length === 0;
@@ -1666,11 +1797,13 @@ function setupEventListeners() {
     const key = apiKeyInput.value.trim();
     const watchmodeKey = watchmodeKeyInput.value.trim();
     const geminiKey = geminiKeyInput.value.trim();
+    const anthropicKey = anthropicKeyInput ? anthropicKeyInput.value.trim() : '';
     
     // Assign to in-memory variables
     tmdbApiKey = key;
     watchmodeApiKey = watchmodeKey;
     geminiApiKey = geminiKey;
+    anthropicApiKey = anthropicKey;
 
     // Persist to backend .env
     await fetch('/keys', {
@@ -1679,7 +1812,8 @@ function setupEventListeners() {
       body: JSON.stringify({
         'TMDB_API_KEY': tmdbApiKey,
         'WATCHMODE_API_KEY': watchmodeApiKey,
-        'GEMINI_API_KEY': geminiApiKey
+        'GEMINI_API_KEY': geminiApiKey,
+        'ANTHROPIC_API_KEY': anthropicApiKey
       })
     });
 
@@ -1693,6 +1827,7 @@ function setupEventListeners() {
     apiKeyInput.value = tmdbApiKey;
     watchmodeKeyInput.value = watchmodeApiKey;
     geminiKeyInput.value = geminiApiKey;
+    if (anthropicKeyInput) anthropicKeyInput.value = anthropicApiKey;
     apiOverlay.classList.remove('hidden');
     apiKeyInput.focus();
   });
@@ -2116,11 +2251,13 @@ async function init() {
     tmdbApiKey = keys['TMDB_API_KEY'] || 'b90551ebe60ebd6e1c86724efd295ee0';
     watchmodeApiKey = keys['WATCHMODE_API_KEY'] || 'LyV3pQaLPnoSIOx9zleDUKPtlukR7tzAKdpC1VHT';
     geminiApiKey = keys['GEMINI_API_KEY'] || '';
+    anthropicApiKey = keys['ANTHROPIC_API_KEY'] || '';
 
     // Populate inputs in the settings overlay to always reflect active keys
     apiKeyInput.value = tmdbApiKey;
     watchmodeKeyInput.value = watchmodeApiKey;
     geminiKeyInput.value = geminiApiKey;
+    if (anthropicKeyInput) anthropicKeyInput.value = anthropicApiKey;
 
   } catch (err) {
     console.error('Failed to load keys from backend:', err);

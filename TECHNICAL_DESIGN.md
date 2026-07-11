@@ -104,7 +104,7 @@ params = {
 ## Smart Fetch Strategy
 
 ### The Problem
-When sorting by TMDb's native `vote_average.desc` (Ranking), TMDb sorts by rating alone. This returns a pathological tail first: obscure titles with 1 vote and a 10.0 rating (e.g. festival shorts or unreleased films) instead of genuinely highly-rated mainstream films.
+When sorting by TMDb's native `vote_average.desc` (Ranking), TMDb sorts by rating alone. This returns a pathological tail first: obscure titles with 1 vote and a 10.0 rating (e.g. obscure indie films or unreleased titles) instead of genuinely highly-rated mainstream films.
 
 ### The Solution: Adaptive Pool Selection
 

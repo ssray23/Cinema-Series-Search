@@ -189,22 +189,39 @@ If TMDb's watch providers returns empty, the app queries the Watchmode API via a
 2. Fetch streaming sources from Watchmode for that title ID
 
 ### Fallback 2: Gemini AI (Google Search Grounding)
-If both TMDb and Watchmode return no flatrate options, `predictOttWithGemini(details)` is called:
+If both TMDb and Watchmode return no flatrate options, `predictOttWithGemini(details)` is called — **only if `vote_count > 0`** (see Zero-Vote Guard below):
 - Uses **Gemini 2.5 Flash** with `googleSearch` grounding tool enabled
-- Prompt includes: title, exact release date, language code, and overview
-- Prompt is tuned for Indian OTT patterns: Hindi/Tamil/Telugu/Bengali films frequently hit OTT within days of theatrical release
-- Returns one of: a platform name from the allowed list, `"Unreleased"`, or `"None"`
-- If the response is `"None"` or `"Unreleased"`, the function returns `null`
+- Prompt is framed as a **fact-checker**, not a predictor: only return a platform if search results explicitly confirm it; default is `None`
+- Prompt instructs: do NOT guess from genre/language/studio patterns
+- Response is validated against `groundingMetadata.groundingChunks`: if Gemini returns a platform name but cited no real web sources, the answer is rejected as a hallucination
+- Response must exactly match a known platform name (case-insensitive `===`); any prose response is discarded
+- Returns `null` if the response is `"None"`, `"Unreleased"`, ungrounded, or doesn't match a known platform
 
-### Fallback 3: Anthropic Claude (Rate-Limit Failover)
+### Fallback 3: Anthropic Claude with Web Search (Rate-Limit Failover)
 If Gemini returns HTTP 429 (rate limit exceeded), the app **automatically retries** with `predictOttWithClaude(details)`:
 - Uses **Claude claude-haiku-4-5** via the Anthropic Messages API
-- Identical prompt to the Gemini call
-- Requires the `anthropic-dangerous-direct-browser-access: true` header (browser-to-API direct call)
+- Enables Anthropic's native **`web_search_20250305`** tool so Claude actively searches the live web (not training data)
+- Requires `anthropic-beta: web-search-2025-03-05` and `anthropic-dangerous-direct-browser-access: true` headers
+- `max_tokens: 1024` (web search responses produce multiple content blocks; 64 was too small)
+- Response parser scans all content blocks in reverse order to find the final text answer (after tool_use/tool_result blocks)
+- Platform name matched case-insensitively against the known list
 - If no Gemini key is configured but an Anthropic key is, Claude is used as the primary AI predictor
 
+### Zero-Vote Guard
+Before any AI call is made, `vote_count` is checked:
 ```javascript
-if (geminiApiKey) {
+const voteCount = details.vote_count ?? 0;
+if (voteCount === 0) {
+  // Skip AI entirely — film is too new/obscure for reliable web data
+  console.log('[OTT Prediction] Skipping AI prediction — vote_count is 0');
+}
+```
+**Rationale:** A film with zero TMDb votes has virtually no web footprint. AI web searches find only rumour/expectation articles ("expected on Netflix", "likely on Zee5") which the model treats as confirmation, producing confident but wrong answers. Films with any votes have real reviews, OTT announcements, and listings that ground the search reliably.
+
+```javascript
+if (voteCount === 0) {
+  // skip
+} else if (geminiApiKey) {
   aiPrediction = await predictOttWithGemini(details);
   if (aiPrediction === 'RATE_LIMIT_EXCEEDED' && anthropicApiKey) {
     aiPrediction = await predictOttWithClaude(details);  // Auto-fallback
@@ -626,4 +643,4 @@ yearInput.addEventListener('keydown', (e) => {
 ---
 
 **Last Updated:** July 11, 2026  
-**Version:** 1.1
+**Version:** 1.2

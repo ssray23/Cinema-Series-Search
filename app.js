@@ -285,18 +285,18 @@ async function predictOttWithGemini(details) {
   const overview = details.overview || '';
   
   const releaseDate = details.release_date || details.first_air_date || '';
-  const prompt = `You are an expert in OTT and cinema distribution, with deep knowledge of Indian streaming platforms.
-The movie/series "${title}" (Released: ${releaseDate || year}, Language: ${lang}) has no streaming data in APIs yet.
+  const prompt = `You are a fact-checker for OTT streaming availability. Search the web to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming.
 Overview: ${overview}
 
-Task: Predict the single most likely OTT platform it is streaming on RIGHT NOW.
-Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+RULES — follow strictly:
+1. Use Google Search to look up the actual streaming platform for this specific title.
+2. Only return a platform name if search results EXPLICITLY CONFIRM it is streaming there right now.
+3. If search results are unclear, contradictory, or show no confirmed OTT release — return "None".
+4. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
+5. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+6. Return "Unreleased" only if results clearly show it is still in theatres with no OTT deal.
+7. Default answer is "None" when in doubt.
 
-IMPORTANT CONTEXT:
-- Indian films (hi/ta/te/ml/kn/bn/pa) very frequently premiere on OTT within days or even simultaneously with theatrical release — being recently released does NOT mean it's unavailable on streaming.
-- Use Google Search to find the actual streaming platform for this specific title if you know it.
-- Only reply "Unreleased" if the film is clearly still in theatres with NO known OTT deal announced.
-- Only reply "None" if it is highly unlikely to be on any of these platforms.
 Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
 
   try {
@@ -319,7 +319,23 @@ Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
     
     if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
       const prediction = data.candidates[0].content.parts[0].text.trim();
-      return (prediction === 'None' || prediction === 'Unreleased') ? null : prediction;
+      console.log('[Gemini OTT Prediction] Raw response:', JSON.stringify(prediction));
+
+      // Reject if Gemini didn't ground its answer in real search results
+      const chunks = data.candidates[0].groundingMetadata?.groundingChunks;
+      if (!chunks || chunks.length === 0) {
+        console.warn('[Gemini OTT Prediction] No grounding sources — rejecting as hallucination:', prediction);
+        return null;
+      }
+      console.log('[Gemini OTT Prediction] Grounded on', chunks.length, 'source(s):', chunks.map(c => c.web?.uri).filter(Boolean));
+
+      // Strictly validate: must exactly match a known platform name
+      const validPlatforms = ['Netflix', 'YouTube', 'Amazon Prime Video', 'Disney+ Hotstar', 'JioCinema', 'Zee5', 'Sony LIV', 'Hoichoi', 'Addatimes', 'Sun NXT', 'Aha'];
+      if (prediction === 'None' || prediction === 'Unreleased') return null;
+      const exact = validPlatforms.find(p => p.toLowerCase() === prediction.toLowerCase());
+      if (exact) return exact;
+      console.warn('[Gemini OTT Prediction] Response not a valid platform name, treating as None:', prediction);
+      return null;
     }
     return null;
   } catch (error) {
@@ -341,19 +357,18 @@ async function predictOttWithClaude(details) {
   const overview = details.overview || '';
   const releaseDate = details.release_date || details.first_air_date || '';
 
-  const prompt = `You are an expert in OTT and cinema distribution, with deep knowledge of Indian streaming platforms.
-The movie/series "${title}" (Released: ${releaseDate || year}, Language: ${lang}) has no streaming data in APIs yet.
+  const prompt = `You are a fact-checker for OTT streaming availability. Use the web_search tool to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming.
 Overview: ${overview}
 
-Task: Predict the single most likely OTT platform it is streaming on RIGHT NOW.
-Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+RULES — follow strictly:
+1. Search the web and only return a platform name if results EXPLICITLY CONFIRM it is streaming there right now.
+2. If search results are unclear, contradictory, or show no confirmed OTT release — return "None".
+3. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
+4. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+5. Return "Unreleased" only if results clearly show it is still in theatres with no OTT deal.
+6. Default answer is "None" when in doubt.
 
-IMPORTANT CONTEXT:
-- Indian films (hi/ta/te/ml/kn/bn/pa) very frequently premiere on OTT within days or even simultaneously with theatrical release — being recently released does NOT mean it's unavailable on streaming.
-- Only reply "Unreleased" if the film is clearly still in theatres with NO known OTT deal announced.
-- Only reply "None" if it is highly unlikely to be on any of these platforms.
-- Use your knowledge of known streaming deals and OTT acquisition patterns.
-Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
+Return ONLY the exact platform name, "Unreleased", or "None". No explanation, no citations.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -362,11 +377,13 @@ Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
         'Content-Type': 'application/json',
         'x-api-key': anthropicApiKey,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 64,
+        max_tokens: 1024,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -374,9 +391,17 @@ Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
     if (!response.ok) throw new Error(`Anthropic API error: ${response.status}`);
     const data = await response.json();
 
-    if (data.content && data.content[0] && data.content[0].text) {
-      const prediction = data.content[0].text.trim();
-      return (prediction === 'None' || prediction === 'Unreleased') ? null : prediction;
+    // Web search may produce multiple content blocks (tool_use + text).
+    // Find the last text block — that is the final synthesised answer.
+    const blocks = data.content || [];
+    const textBlock = [...blocks].reverse().find(b => b.type === 'text');
+    if (textBlock && textBlock.text) {
+      const raw = textBlock.text.trim();
+      // Try to match a known platform name anywhere in the response
+      const platforms = ['Netflix', 'YouTube', 'Amazon Prime Video', 'Disney+ Hotstar', 'JioCinema', 'Zee5', 'Sony LIV', 'Hoichoi', 'Addatimes', 'Sun NXT', 'Aha'];
+      const matched = platforms.find(p => raw.toLowerCase().includes(p.toLowerCase()));
+      if (matched) return matched;
+      if (raw === 'None' || raw === 'Unreleased') return null;
     }
     return null;
   } catch (error) {
@@ -1478,9 +1503,13 @@ async function renderWatchProviders(details) {
 
         // If STILL empty after Watchmode (or if Watchmode wasn't queried)
         if (flatrateList.length === 0) {
+          // Skip AI prediction for films with zero votes — they're too new/obscure for reliable web data
+          const voteCount = details.vote_count ?? 0;
           // Try Gemini AI first, fall back to Anthropic Claude if Gemini rate-limits
           let aiPrediction = null;
-          if (geminiApiKey) {
+          if (voteCount === 0) {
+            console.log('[OTT Prediction] Skipping AI prediction — vote_count is 0, film too new for reliable data.');
+          } else if (geminiApiKey) {
             container.innerHTML = '<div class="spinner" style="display:inline-block; margin-right:0.5rem; width:14px; height:14px;"></div><span class="text-muted">Asking AI...</span>';
             aiPrediction = await predictOttWithGemini(details);
             if (aiPrediction === 'RATE_LIMIT_EXCEEDED' && anthropicApiKey) {

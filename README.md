@@ -128,8 +128,9 @@ Finding accurate streaming rights (especially for regional and newly released ti
 
 1. **TMDb Provider API**: Fast and native. If TMDb knows where it's streaming, it displays the pills immediately.
 2. **Watchmode API (Fallback 1)**: If TMDb fails, the app automatically queries Watchmode's API, which often has more up-to-date data for obscure titles.
-3. **Gemini AI with Google Search Grounding (Fallback 2)**: If both databases return zero flatrate streaming options, CineSearch asks Gemini 2.5 Flash to predict the most likely platform. Using **Google Search Grounding**, the AI actively searches the live internet for streaming deal announcements rather than blindly guessing.
-4. **Anthropic Claude (Fallback 3)**: If Gemini hits its rate limit (HTTP 429), the app automatically retries the prediction using Claude (claude-haiku-4-5) — no user action required. The AI prompt is tuned specifically for Indian OTT patterns, knowing that Hindi/Telugu/Tamil films often hit streaming platforms within days of theatrical release.
+3. **Gemini AI with Google Search Grounding (Fallback 2)**: If both databases return zero flatrate streaming options — and the film has at least one TMDb vote — CineSearch asks Gemini 2.5 Flash to look up the current streaming platform. Using **Google Search Grounding**, Gemini actively searches the live internet. The response is only accepted if Gemini cites real web sources (`groundingChunks`); ungrounded answers are silently discarded. The prompt is tuned for truthfulness: it only returns a platform name if search results explicitly confirm it, and defaults to `None` when in doubt.
+4. **Anthropic Claude with Web Search (Fallback 3)**: If Gemini hits its rate limit (HTTP 429), the app automatically retries using Claude (claude-haiku-4-5) with Anthropic's native `web_search` tool enabled — so Claude also searches the live web rather than guessing from training data.
+5. **Zero-vote guard**: Films with `vote_count === 0` skip AI prediction entirely. A brand-new film with no community votes has almost no reliable web footprint; any AI search would find only rumour/expectation articles and produce wrong answers.
 
 ### Ranking Without Exclusion
 

@@ -94,7 +94,12 @@ const yearInput = document.getElementById('year-input');
 // the user to arrow down to past years (min stays at 1900).
 if (yearInput) {
   const _currentYear = new Date().getFullYear();
-  const _prefillYear = () => { if (!yearInput.value) yearInput.value = _currentYear; };
+  const _prefillYear = () => { 
+    if (!yearInput.value) {
+      yearInput.value = _currentYear; 
+      yearInput.dispatchEvent(new Event('input'));
+    }
+  };
   yearInput.addEventListener('mousedown', _prefillYear);
   yearInput.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') _prefillYear();
@@ -1940,31 +1945,19 @@ function setupEventListeners() {
     totalResults = 0;
     paginationContainer.classList.add('hidden');
     
-    // Reset output
-    moviesGrid.innerHTML = '';
-    moviesGrid.classList.add('hidden');
-    emptyState.classList.remove('hidden');
-    
-    // Reset sort state to default (Ranking)
-    currentSort = 'vote_average.desc';
+    // Reset sort state to default (Popularity)
+    currentSort = 'vote_count.desc';
     sortOpts.forEach(opt => {
-      opt.classList.toggle('active', opt.dataset.sort === 'vote_average.desc');
+      opt.classList.toggle('active', opt.dataset.sort === 'vote_count.desc');
     });
     
-    // Update empty state icon & text for current mode
-    const emptyIcon = document.getElementById('empty-state-icon');
-    if (emptyIcon) {
-      emptyIcon.setAttribute('data-lucide', currentMode === 'movie' ? 'film' : 'tv');
-    }
-    const emptyText = document.getElementById('empty-state-text');
-    if (emptyText) {
-      emptyText.textContent = "Fill out any of the criteria above to start searching. For the best results, select both an actor and actress to find their collaborative work!";
-    }
-    
-    resultsCountText.textContent = 'Ready for discovery';
-    sortToolbar.classList.add('hidden');
+    // Show sort toolbar
+    sortToolbar.classList.remove('hidden');
     
     lucide.createIcons();
+    
+    // Discover movies for the default state (landing page behavior)
+    discoverMovies();
   });
 
   // Submit search form

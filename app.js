@@ -285,19 +285,24 @@ async function predictOttWithGemini(details) {
   const overview = details.overview || '';
   
   const releaseDate = details.release_date || details.first_air_date || '';
-  const prompt = `You are a fact-checker for OTT streaming availability. Search the web to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming.
+  const prompt = `You are a strict fact-checker for OTT streaming availability. Search the web to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming or will stream.
 Overview: ${overview}
 
-RULES — follow strictly:
-1. Use Google Search to look up the actual streaming platform for this specific title.
-2. Only return a platform name if search results EXPLICITLY CONFIRM it is streaming there right now.
-3. If search results are unclear, contradictory, or show no confirmed OTT release — return "None".
-4. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
-5. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
-6. Return "Unreleased" only if results clearly show it is still in theatres with no OTT deal.
-7. Default answer is "None" when in doubt.
+CRITICAL RULES — follow strictly:
+1. Pay close attention to the release year (${releaseDate || year}). Do NOT confuse this movie with originals, remakes, or prequels of the same name.
+2. If the movie is currently in theatres or recently released, but its post-theatrical OTT streaming rights have been officially acquired by a platform (e.g., Netflix), return that platform.
+3. Only return a platform name if search results EXPLICITLY CONFIRM it is streaming there right now or has confirmed OTT rights.
+4. If search results are unclear, contradictory, or show no confirmed OTT release or rights — return "None".
+5. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
+6. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
 
-Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
+You MUST reply in exactly this JSON format:
+{
+  "search_summary": "Brief summary of what search results say about this title.",
+  "year_match": "Yes or No",
+  "explicit_confirmation": "Yes or No - is there definitive proof of rights/streaming?",
+  "prediction": "The exact platform name from the list, 'Unreleased', or 'None'"
+}`;
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
@@ -309,7 +314,7 @@ Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
         tools: [{ googleSearch: {} }],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 100,
+          maxOutputTokens: 500,
         }
       })
     });
@@ -318,8 +323,24 @@ Return ONLY the exact platform name, "Unreleased", or "None". No explanation.`;
     const data = await response.json();
     
     if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
-      const prediction = data.candidates[0].content.parts[0].text.trim();
-      console.log('[Gemini OTT Prediction] Raw response:', JSON.stringify(prediction));
+      let rawText = data.candidates[0].content.parts[0].text.trim();
+      console.log('[Gemini OTT Prediction] Raw response:', JSON.stringify(rawText));
+
+      let prediction = 'None';
+      try {
+        const jsonStr = rawText.replace(/```json/i, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(jsonStr);
+        console.log('[Gemini OTT Prediction] Reasoning:', parsed.search_summary, 'Year Match:', parsed.year_match, 'Confirmed:', parsed.explicit_confirmation);
+        
+        if (parsed.year_match?.toLowerCase().includes('no') || parsed.explicit_confirmation?.toLowerCase().includes('no')) {
+          prediction = 'None';
+        } else {
+          prediction = parsed.prediction;
+        }
+      } catch (e) {
+        console.warn('Failed to parse Gemini JSON prediction', e);
+        prediction = 'None'; // Fail safely if it skipped CoT
+      }
 
       // Reject if Gemini didn't ground its answer in real search results
       const chunks = data.candidates[0].groundingMetadata?.groundingChunks;
@@ -357,18 +378,24 @@ async function predictOttWithClaude(details) {
   const overview = details.overview || '';
   const releaseDate = details.release_date || details.first_air_date || '';
 
-  const prompt = `You are a fact-checker for OTT streaming availability. Use the web_search tool to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming.
+  const prompt = `You are a strict fact-checker for OTT streaming availability. Use the web_search tool to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming or will stream.
 Overview: ${overview}
 
-RULES — follow strictly:
-1. Search the web and only return a platform name if results EXPLICITLY CONFIRM it is streaming there right now.
-2. If search results are unclear, contradictory, or show no confirmed OTT release — return "None".
-3. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
-4. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
-5. Return "Unreleased" only if results clearly show it is still in theatres with no OTT deal.
-6. Default answer is "None" when in doubt.
+CRITICAL RULES — follow strictly:
+1. Pay close attention to the release year (${releaseDate || year}). Do NOT confuse this movie with originals, remakes, or prequels of the same name.
+2. If the movie is currently in theatres or recently released, but its post-theatrical OTT streaming rights have been officially acquired by a platform (e.g., Netflix), return that platform.
+3. Only return a platform name if results EXPLICITLY CONFIRM it is streaming there right now or has confirmed OTT rights.
+4. If search results are unclear, contradictory, or show no confirmed OTT release or rights — return "None".
+5. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
+6. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
 
-Return ONLY the exact platform name, "Unreleased", or "None". No explanation, no citations.`;
+You MUST reply in exactly this JSON format:
+{
+  "search_summary": "Brief summary of what search results say about this title.",
+  "year_match": "Yes or No",
+  "explicit_confirmation": "Yes or No - is there definitive proof of rights/streaming?",
+  "prediction": "The exact platform name from the list, 'Unreleased', or 'None'"
+}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -397,11 +424,27 @@ Return ONLY the exact platform name, "Unreleased", or "None". No explanation, no
     const textBlock = [...blocks].reverse().find(b => b.type === 'text');
     if (textBlock && textBlock.text) {
       const raw = textBlock.text.trim();
-      // Try to match a known platform name anywhere in the response
+      
+      let prediction = 'None';
+      try {
+        const jsonStr = raw.replace(/```json/i, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(jsonStr);
+        console.log('[Anthropic OTT Prediction] Reasoning:', parsed.search_summary, 'Year Match:', parsed.year_match, 'Confirmed:', parsed.explicit_confirmation);
+        
+        if (parsed.year_match?.toLowerCase().includes('no') || parsed.explicit_confirmation?.toLowerCase().includes('no')) {
+          prediction = 'None';
+        } else {
+          prediction = parsed.prediction;
+        }
+      } catch (e) {
+        console.warn('Failed to parse Anthropic JSON prediction', e);
+        prediction = 'None'; // Fail safely
+      }
+      
       const platforms = ['Netflix', 'YouTube', 'Amazon Prime Video', 'Disney+ Hotstar', 'JioCinema', 'Zee5', 'Sony LIV', 'Hoichoi', 'Addatimes', 'Sun NXT', 'Aha'];
-      const matched = platforms.find(p => raw.toLowerCase().includes(p.toLowerCase()));
+      const matched = platforms.find(p => p.toLowerCase() === prediction.toLowerCase() || prediction.toLowerCase().includes(p.toLowerCase()));
       if (matched) return matched;
-      if (raw === 'None' || raw === 'Unreleased') return null;
+      if (prediction === 'None' || prediction === 'Unreleased') return null;
     }
     return null;
   } catch (error) {

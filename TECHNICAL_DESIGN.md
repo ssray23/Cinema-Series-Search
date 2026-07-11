@@ -191,20 +191,19 @@ If TMDb's watch providers returns empty, the app queries the Watchmode API via a
 ### Fallback 2: Gemini AI (Google Search Grounding)
 If both TMDb and Watchmode return no flatrate options, `predictOttWithGemini(details)` is called — **only if `vote_count > 0`** (see Zero-Vote Guard below):
 - Uses **Gemini 2.5 Flash** with `googleSearch` grounding tool enabled
-- Prompt is framed as a **fact-checker**, not a predictor: only return a platform if search results explicitly confirm it; default is `None`
-- Prompt instructs: do NOT guess from genre/language/studio patterns
-- Response is validated against `groundingMetadata.groundingChunks`: if Gemini returns a platform name but cited no real web sources, the answer is rejected as a hallucination
-- Response must exactly match a known platform name (case-insensitive `===`); any prose response is discarded
-- Returns `null` if the response is `"None"`, `"Unreleased"`, ungrounded, or doesn't match a known platform
+- Prompt requires the model to output a strictly structured **JSON response** with explicit `search_summary`, `year_match` (Yes/No), and `explicit_confirmation` (Yes/No) fields. This acts as a Chain-of-Thought (CoT) guardrail to prevent hallucination for obscure films.
+- If the model admits the year doesn't match or explicit OTT rights aren't confirmed, the client-side JSON parser forcibly rejects the prediction and returns `None`.
+- Response is also validated against `groundingMetadata.groundingChunks`: if Gemini returns a platform name but cited no real web sources, the answer is rejected.
+- Returns `null` if the response is `"None"`, `"Unreleased"`, ungrounded, or if the JSON parser throws an error.
 
 ### Fallback 3: Anthropic Claude with Web Search (Rate-Limit Failover)
 If Gemini returns HTTP 429 (rate limit exceeded), the app **automatically retries** with `predictOttWithClaude(details)`:
 - Uses **Claude claude-haiku-4-5** via the Anthropic Messages API
 - Enables Anthropic's native **`web_search_20250305`** tool so Claude actively searches the live web (not training data)
+- Uses the same **JSON CoT parsing** rules as Gemini to enforce year-matching and explicit confirmation checks before predicting a platform.
 - Requires `anthropic-beta: web-search-2025-03-05` and `anthropic-dangerous-direct-browser-access: true` headers
-- `max_tokens: 1024` (web search responses produce multiple content blocks; 64 was too small)
+- `max_tokens: 1024` (web search responses produce multiple content blocks; needed enough room for JSON reasoning)
 - Response parser scans all content blocks in reverse order to find the final text answer (after tool_use/tool_result blocks)
-- Platform name matched case-insensitively against the known list
 - If no Gemini key is configured but an Anthropic key is, Claude is used as the primary AI predictor
 
 ### Zero-Vote Guard

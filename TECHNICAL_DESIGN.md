@@ -322,7 +322,7 @@ if (titleQuery) {
 ### Global Variables
 ```javascript
 let currentMode = 'movie';           // 'movie' or 'tv'
-let currentSort = 'vote_average.desc';  // 'vote_average.desc', 'vote_count.desc', 'primary_release_date.desc'
+let currentSort = 'vote_count.desc';    // 'vote_count.desc', 'vote_average.desc', 'primary_release_date.desc'
 let currentPage = 1;                 // Current pagination page
 let totalPages = 1;                  // Total pages from TMDb (for pagination UI)
 let totalResults = 0;                // Total result count from TMDb
@@ -451,21 +451,17 @@ async function openDetailDialog(movieId) {
 ```
 
 ### OTT Provider Pill Click
-Each provider pill is a clickable link that opens a Google Search (via `site:` query) for reliable title-to-page matching:
+Each provider pill is a clickable link that opens a Google Search. We use Google's semantic search (title, year, language, provider name, and intent) to reliably find the specific title page on the provider's platform, avoiding the strict text-matching limitations of `site:` queries which fail if a platform's page doesn't explicitly index the release year.
 
 ```javascript
-const PROVIDER_DOMAINS = {
-  8: 'netflix.com',
-  9: 'primevideo.com',
-  232: 'zee5.com',
-  ...
-};
-
-pill.addEventListener('click', (e) => {
-  const domain = PROVIDER_DOMAINS[providerId];
-  const url = `https://google.com/search?q=site:${domain} ${title}`;
-  window.open(url, '_blank');
-});
+  function buildGoogleProviderSearchUrl(title, year, langSuffix, provider, intent) {
+    const cleanTitle = (title || '').trim();
+    const cleanYear = (year || '').trim();
+    const cleanLang = (langSuffix || '').trim();
+    
+    const query = `${cleanTitle} ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
+    return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  }
 ```
 
 ### Server Lifecycle Management

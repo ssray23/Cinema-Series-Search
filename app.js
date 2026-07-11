@@ -62,7 +62,7 @@ let anthropicApiKey = '';
 
 let selectedActorId = null;
 let selectedActressId = null;
-let currentSort = 'vote_average.desc';
+let currentSort = 'vote_count.desc';
 let activeSearchResults = []; // Cache current search results for detail view
 let currentPage = 1;
 let totalPages = 1;
@@ -1547,66 +1547,16 @@ async function renderWatchProviders(details) {
       }
     }
 
-  // Map of TMDb provider_id → domain for Google site: queries.
-  // All OTT pills intentionally use Google for more reliable title-to-page matching.
-  const PROVIDER_DOMAINS = {
-    8: 'netflix.com',             // Netflix (TMDb)
-    203: 'netflix.com',           // Netflix (Watchmode)
-    175: 'netflix.com',           // Netflix Kids
-    9: 'primevideo.com',          // Amazon Prime Video (GB)
-    119: 'primevideo.com',        // Amazon Prime Video (IN)
-    10: 'primevideo.com',         // Amazon Video
-    2100: 'primevideo.com',       // Amazon Prime with Ads
-    337: 'disneyplus.com',        // Disney+
-    122: 'hotstar.com',           // Disney+ Hotstar
-    2336: 'hotstar.com',          // JioHotstar
-    232: 'zee5.com',              // Zee5
-    237: 'sonyliv.com',           // Sony LIV
-    315: 'hoichoi.tv',            // Hoichoi
-    2176: 'hoichoi.tv',           // Hoichoi Amazon Channel
-    392: 'jiocinema.com',         // JioCinema
-    188: 'youtube.com',           // YouTube Premium
-    192: 'youtube.com',           // YouTube
-    235: 'youtube.com',           // YouTube Free
-    41: 'itv.com',                // ITVX
-    2300: 'itv.com',              // ITVX Premium
-    38: 'bbc.co.uk',              // BBC iPlayer
-    39: 'bbc.co.uk',              // BBC iPlayer (alt)
-    103: 'channel4.com',          // Channel 4
-    2311: 'channel4.com',         // Channel 4 Plus
-    350: 'tv.apple.com',          // Apple TV+
-    15: 'hulu.com',               // Hulu
-    384: 'max.com',               // Max
-    1899: 'max.com',              // Max (alt id)
-    386: 'peacocktv.com',         // Peacock
-    531: 'paramountplus.com',     // Paramount+
-    11: 'mubi.com',               // MUBI
-    283: 'crunchyroll.com',       // Crunchyroll
-    258: 'skyshowtime.com',       // SkyShowtime
-    569: 'curiositystream.com',   // CuriosityStream
-    37: 'shudder.com',            // Shudder
-    3: 'play.google.com',         // Google Play Movies
-    2: 'tv.apple.com',            // Apple iTunes
-    68: 'microsoft.com',          // Microsoft Movies
-    10001: 'chorki.com',
-    10002: 'bioscope-live.com',
-    10003: 'klikk.tv',
-    10004: 'addatimes.com',
-    10005: 'bongobd.com',
-  };
-
+  // All OTT pills intentionally use Google for reliable title-to-page matching.
   function buildGoogleProviderSearchUrl(title, year, langSuffix, provider, intent) {
-    const domain = PROVIDER_DOMAINS[provider.provider_id];
     const cleanTitle = (title || '').trim();
     const cleanYear = (year || '').trim();
     const cleanLang = (langSuffix || '').trim();
     
-    // For site-restricted searches on specific streaming domains, we omit the release year
-    // and language suffix to keep the query broad. This allows Google's spelling corrector
-    // to handle transliteration differences (like Aajo vs Ajo) and match pages successfully.
-    const query = domain
-      ? `${cleanTitle} site:${domain}`.replace(/\s+/g, ' ').trim()
-      : `${cleanTitle} ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
+    // We rely on Google's semantic search rather than `site:` restrictions. 
+    // `site:` forces strict text matching which either returns the wrong movie (if year is omitted) 
+    // or "nothing found" (if the OTT page doesn't index the year).
+    const query = `${cleanTitle} ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 

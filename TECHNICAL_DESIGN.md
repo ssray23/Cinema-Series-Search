@@ -2,9 +2,9 @@
 
 ## Architecture Overview
 
-CineSearch is a **client-side SPA (Single Page Application)** that directly queries [The Movie Database (TMDb) API](https://www.themoviedb.org/settings/api) from the browser. No backend server is involved in business logic — the lightweight Python server (`server.py`) exists only to serve static files on `localhost:8080`.
+CineSearch is a **hybrid SPA (Single Page Application)**. While the UI and search state are managed purely on the client side in `app.js`, the lightweight Python server (`server.py`) acts as a secure proxy to inject API keys from a local `.env` file, keeping them out of the frontend source code.
 
-```
+```text
 ┌─────────────────────┐
 │  Browser (User)     │
 │  ┌───────────────┐  │
@@ -12,21 +12,20 @@ CineSearch is a **client-side SPA (Single Page Application)** that directly quer
 │  │  (index.html) │  │
 │  └───────┬───────┘  │
 └──────────┼──────────┘
-           │
-           ├─────────────────────────────────────────┐
-           │                                         │
-           ▼                                         ▼
-      ┌─────────────┐                      ┌────────────────┐
-      │  app.js     │                      │  styles.css    │
-      │  (Logic)    │                      │  (Styling)     │
-      └──────┬──────┘                      └────────────────┘
-             │
-             │ (fetch JSON)
-             ▼
-      ┌─────────────────────────────┐
-      │  TMDb API                   │
-      │  (search, discover, details)│
-      └─────────────────────────────┘
+           │ (fetches /api/env)
+           ▼
+┌─────────────────────────────────┐
+│  Local Server (server.py)       │
+│  - Reads .env file              │
+│  - Serves static assets         │
+└──────────────────┬──────────────┘
+                   │
+    ┌──────────────┴──────────────┐
+    ▼              ▼              ▼
+┌────────┐     ┌────────┐     ┌────────┐
+│  TMDb  │     │Watchmode│    │ Gemini │
+│  API   │     │  API    │    │  API   │
+└────────┘     └────────┘     └────────┘
 ```
 
 ---

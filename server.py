@@ -3,6 +3,7 @@ import sys
 import http.server
 import socketserver
 import threading
+import json
 
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +43,24 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             return
+            
+        if self.path == '/keys':
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length > 0:
+                body = self.rfile.read(content_length)
+                data = json.loads(body)
+                
+                env_path = os.path.join(DIRECTORY, '.env')
+                with open(env_path, 'w') as f:
+                    for key, val in data.items():
+                        if val:
+                            f.write(f"{key}={val}\n")
+                            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+            return
         
         self.send_response(404)
         self.end_headers()
@@ -53,6 +72,27 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"pong")
+            return
+
+        if self.path == '/keys':
+            env_path = os.path.join(DIRECTORY, '.env')
+            keys = {
+                'TMDB_API_KEY': '',
+                'WATCHMODE_API_KEY': '',
+                'GEMINI_API_KEY': ''
+            }
+            if os.path.exists(env_path):
+                with open(env_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and '=' in line:
+                            k, v = line.split('=', 1)
+                            keys[k.strip()] = v.strip()
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(keys).encode('utf-8'))
             return
 
         if self.path == '/shutdown':

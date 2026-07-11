@@ -1596,6 +1596,67 @@ body.light-theme .provider-pill--rent {
   background: rgba(251, 191, 36, 0.08);
 }
 
+/* Suggestion pill — dashed border, blue tint to signal "unverified, check here" */
+.provider-pill--suggestion {
+  border-style: dashed;
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(96, 165, 250, 0.06);
+  font-size: 0.8rem;
+}
+.provider-pill--suggestion:hover {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.15);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
+}
+body.light-theme .provider-pill--suggestion {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(96, 165, 250, 0.06);
+  color: #1e40af;
+}
+body.light-theme .provider-pill--suggestion:hover {
+  border-color: #2563eb;
+  background: rgba(96, 165, 250, 0.15);
+}
+
+/* AI Suggested pill — animated colorful gradient border to indicate AI prediction */
+.provider-pill--ai-suggested {
+  position: relative;
+  background: var(--bg-input);
+  background-clip: padding-box;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.provider-pill--ai-suggested::before {
+  content: '';
+  position: absolute;
+  top: -2px; bottom: -2px;
+  left: -2px; right: -2px;
+  background: linear-gradient(45deg, #ff7eb3, #a068ff, #74ebd5, #ff7eb3);
+  background-size: 400%;
+  z-index: -1;
+  border-radius: 9px;
+  animation: ai-glow 8s linear infinite;
+}
+
+@keyframes ai-glow {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+
+.provider-pill--ai-suggested:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(123, 0, 255, 0.4);
+}
+
+body.light-theme .provider-pill--ai-suggested {
+  background: #ffffff;
+  color: #111827;
+}
+
 .provider-pill img {
   width: 22px;
   height: 22px;

@@ -44,14 +44,23 @@ The app intelligently switches between two TMDb API pipelines:
 
 ## 🚀 Getting Started
 
-### Step 1 — Get a Free TMDb API Key
+### Step 1 — Get Your Free API Keys
 
-1. Sign up (free) at [themoviedb.org](https://www.themoviedb.org/).
-2. Go to **Account Settings → API**.
-3. Request an API key — select **Developer** if prompted.
-4. Copy the **API Key (v3 auth)** — it looks like a 32-character hex string.
+CineSearch requires three free API keys to function fully:
+1. **TMDb API Key** (Core metadata): Sign up at [themoviedb.org](https://www.themoviedb.org/) → Account Settings → API.
+2. **Watchmode API Key** (Primary streaming data): Sign up at [watchmode.com](https://api.watchmode.com/).
+3. **Gemini API Key** (AI fallback prediction): Get a free key at [Google AI Studio](https://aistudio.google.com/).
 
-### Step 2 — Launch the App
+### Step 2 — Configure the `.env` File
+In the root directory of the project, create or edit the `.env` file and paste your keys:
+```
+TMDB_API_KEY=your_tmdb_key_here
+WATCHMODE_API_KEY=your_watchmode_key_here
+GEMINI_API_KEY=your_gemini_key_here
+```
+*Note: The app will gracefully degrade if the Watchmode or Gemini keys are missing, but the TMDb key is required.*
+
+### Step 3 — Launch the App
 
 #### Option A: Desktop App (macOS — recommended)
 Double-click the **Cinema Search** icon on your Desktop. The app starts the server and opens in your browser automatically.
@@ -62,9 +71,6 @@ cd "/Users/suddharay/Library/Mobile Documents/com~apple~CloudDocs/Mac Projects/C
 python3 server.py
 ```
 Then open [http://localhost:8080](http://localhost:8080) in your browser.
-
-### Step 3 — Enter Your API Key
-On first launch, a prompt will appear asking for your TMDb API key. Paste it in and click **Save API Key**. The key is stored in your browser's `localStorage` — it never leaves your device.
 
 ---
 

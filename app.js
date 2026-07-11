@@ -55,7 +55,10 @@ const TV_GENRES = `
   <option value="37">Western</option>
 `;
 
-let tmdbApiKey = localStorage.getItem('tmdb_api_key') || 'b90551ebe60ebd6e1c86724efd295ee0';
+let tmdbApiKey = '';
+let watchmodeApiKey = '';
+let geminiApiKey = '';
+
 let selectedActorId = null;
 let selectedActressId = null;
 let currentSort = 'vote_average.desc';
@@ -71,6 +74,8 @@ let currentTheme = localStorage.getItem('theme') || 'dark';
 const apiOverlay = document.getElementById('api-key-overlay');
 const apiKeyForm = document.getElementById('api-key-form');
 const apiKeyInput = document.getElementById('api-key-input');
+const watchmodeKeyInput = document.getElementById('watchmode-key-input');
+const geminiKeyInput = document.getElementById('gemini-key-input');
 const changeKeyBtn = document.getElementById('change-key-btn');
 const shutdownBtn = document.getElementById('shutdown-btn');
 const shutdownOverlay = document.getElementById('shutdown-overlay');
@@ -78,7 +83,7 @@ const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeIcon = document.getElementById('theme-icon');
 const titleInput = document.getElementById('title-input');
 const titleClearBtn = document.getElementById('title-clear-btn');
-const ottOnlyCheckbox = document.getElementById('ott-only-checkbox');
+
 
 const searchForm = document.getElementById('search-form');
 const yearInput = document.getElementById('year-input');
@@ -117,9 +122,12 @@ const resultsCountText = document.getElementById('results-count-text');
 const sortToolbar = document.getElementById('sort-toolbar');
 const sortOpts = document.querySelectorAll('.sort-opt');
 const paginationContainer = document.getElementById('pagination-container');
+const yearSelect = document.getElementById('year-select');
 const loadMoreBtn = document.getElementById('load-more-btn');
 
-// Dialog elements
+
+
+// --- Detail Dialog Elements ---
 const detailDialog = document.getElementById('movie-detail-dialog');
 const closeDialogBtn = document.getElementById('close-dialog-btn');
 const dialogBackdrop = document.getElementById('dialog-backdrop');
@@ -193,8 +201,18 @@ async function fetchFromTMDb(endpoint, queryParams = {}) {
   try {
     const response = await fetch(url.toString());
     if (response.status === 401) {
-      localStorage.removeItem('tmdb_api_key');
+      // Clear invalid key
       tmdbApiKey = '';
+      fetch('/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          'TMDB_API_KEY': '',
+          'WATCHMODE_API_KEY': watchmodeApiKey,
+          'GEMINI_API_KEY': geminiApiKey
+        })
+      });
+      alert('The TMDb API Key you entered is invalid. Please try again.');
       showApiOverlay();
       throw new Error('Invalid API Key');
     }
@@ -205,6 +223,90 @@ async function fetchFromTMDb(endpoint, queryParams = {}) {
   } catch (error) {
     console.error('TMDb Fetch Error:', error);
     throw error;
+  }
+}
+
+/**
+ * Perform a fetch to Watchmode API
+ */
+async function fetchFromWatchmode(tmdbId, type) {
+  if (!watchmodeApiKey) return null;
+  
+  try {
+    // 1. Map TMDb ID to Watchmode ID
+    const searchField = type === 'tv' ? 'tmdb_tv_id' : 'tmdb_movie_id';
+    const searchUrl = `https://api.watchmode.com/v1/search/?apiKey=${watchmodeApiKey}&search_field=${searchField}&search_value=${tmdbId}`;
+    
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) throw new Error(`Watchmode search error: ${searchRes.status}`);
+    const searchData = await searchRes.json();
+    
+    if (!searchData.title_results || searchData.title_results.length === 0) {
+      return null; // Not found on Watchmode
+    }
+    
+    const watchmodeId = searchData.title_results[0].id;
+    
+    // 2. Fetch streaming sources
+    const sourcesUrl = `https://api.watchmode.com/v1/title/${watchmodeId}/sources/?apiKey=${watchmodeApiKey}`;
+    const sourcesRes = await fetch(sourcesUrl);
+    if (!sourcesRes.ok) throw new Error(`Watchmode sources error: ${sourcesRes.status}`);
+    const sourcesData = await sourcesRes.json();
+    
+    return sourcesData;
+  } catch (error) {
+    console.error('Watchmode Fetch Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Predict OTT platform using Gemini AI when APIs fail
+ */
+async function predictOttWithGemini(details) {
+  if (!geminiApiKey) return null;
+
+  const title = details.title || details.name;
+  const year = (details.release_date || details.first_air_date || '').split('-')[0];
+  const lang = details.original_language;
+  const overview = details.overview || '';
+  
+  const prompt = `You are an expert in cinema distribution. The movie or series "${title}" (Year: ${year}, Language code: ${lang}) has no streaming data available in APIs.
+Overview: ${overview}
+
+Predict the single most likely streaming platform it is on right now. 
+Only choose from this list: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+If it is a theatrical movie that just released and hasn't hit streaming yet, reply "Unreleased".
+If you believe it is highly unlikely to be available on any of these platforms, reply "None".
+Return ONLY the exact name of the platform from the list, "Unreleased", or "None". Do not explain your reasoning.`;
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 100,
+        }
+      })
+    });
+
+    if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
+    const data = await response.json();
+    
+    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
+      const prediction = data.candidates[0].content.parts[0].text.trim();
+      return (prediction === 'None' || prediction === 'Unreleased') ? null : prediction;
+    }
+    return null;
+  } catch (error) {
+    console.error('Gemini Prediction Error:', error);
+    if (error.message && error.message.includes('429')) return 'RATE_LIMIT_EXCEEDED';
+    return null;
   }
 }
 
@@ -380,69 +482,6 @@ function matchesOttKeyword(text, keyword) {
   return false;
 }
 
-/**
- * Check if a movie is available on flatrate subscription OTT platforms.
- */
-function checkHasStreamProviders(movieData) {
-  if (!movieData) {
-    console.warn("checkHasStreamProviders: movieData is empty/undefined");
-    return false;
-  }
-  const watchData = (movieData['watch/providers'] || movieData.watch_providers)?.results;
-  if (watchData) {
-    for (const loc of Object.keys(watchData)) {
-      if (
-        watchData[loc]?.flatrate?.length > 0 ||
-        watchData[loc]?.free?.length > 0 ||
-        watchData[loc]?.ads?.length > 0
-      ) return true;
-    }
-  }
-
-  // Fallback: Check Networks and Production Companies for known OTTs
-  const knownOttKeywords = [
-    'netflix', 'amazon', 'prime video', 'hoichoi', 'zee5', 'hotstar', 'disney+', 'hulu',
-    'apple tv', 'apple tv+', 'sony liv', 'jiocinema', 'peacock', 'paramount+', 'max', 'hbo',
-    'chorki', 'bioscope', 'addatimes', 'klikk', 'bongo', 'bongobd', 'svf', 'eskay', 'surinder'
-  ];
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  const releaseStr = movieData.release_date || movieData.first_air_date;
-  const isFutureRelease = releaseStr && releaseStr > todayStr;
-
-  let isRecentMovie = false;
-  if (currentMode === 'movie' && releaseStr && !isFutureRelease) {
-    const releaseDate = new Date(releaseStr);
-    const today = new Date();
-    const diffDays = (today - releaseDate) / (1000 * 60 * 60 * 24);
-    if (diffDays >= 0 && diffDays < 60) {
-      isRecentMovie = true;
-    }
-  }
-
-  const networks = movieData.networks || [];
-  for (const n of networks) {
-    if (n.name && knownOttKeywords.some(ott => matchesOttKeyword(n.name, ott))) return true;
-  }
-
-  if (currentMode === 'tv' || !isRecentMovie) {
-    const companies = movieData.production_companies || [];
-    for (const c of companies) {
-      if (c.name && knownOttKeywords.some(ott => matchesOttKeyword(c.name, ott))) return true;
-    }
-  }
-
-  const homepage = movieData.homepage || '';
-  if (homepage) {
-    const lowerHome = homepage.toLowerCase();
-    if (knownOttKeywords.some(ott => lowerHome.includes(ott.replace(/\s+/g, '').replace('+', '')))) {
-      return true;
-    }
-  }
-
-  console.log("checkHasStreamProviders: No stream providers found for", movieData.name || movieData.title, movieData);
-  return false;
-}
 
 /**
  * Detect the user's ISO 3166-1 country code from their browser timezone.
@@ -564,7 +603,7 @@ async function discoverMovies() {
   const year = yearInput.value ? parseInt(yearInput.value, 10) : null;
   const language = languageSelect.value || null;
   const genre = genreSelect ? genreSelect.value || null : null;
-  const ottOnly = ottOnlyCheckbox ? ottOnlyCheckbox.checked : false;
+
   
   // Combine cast members. Comma = AND query in TMDb discover
   let withCast = [];
@@ -589,17 +628,13 @@ async function discoverMovies() {
       // IMPORTANT: we deliberately do NOT send sort_by=vote_average.desc to TMDb.
       // Without a vote-count floor, TMDb's rating sort returns the pathological tail
       // first - obscure titles with a single 10/10 vote (festival shorts, unreleased
-      // films) - which are almost never on any OTT service, so the OTT filter then
-      // wipes the whole page. Instead we fetch a real, broad pool ordered by
-      // popularity (which still surfaces low-vote recent OTT releases) and apply the
+      // films). Instead we fetch a broad pool ordered by popularity and apply the
       // Ranking order client-side via weightedRating() in sortActiveResults().
       params.sort_by = 'popularity.desc';
     } else if (currentSort === 'primary_release_date.desc') {
       // Release Date must ALWAYS be a true newest-first date sort - we cannot fake it
       // with a popularity pool (that would only re-order the most *popular* titles by
-      // date and never surface genuinely new-but-obscure releases). Nothing is hidden;
-      // when OTT is on and the raw feed is provider-sparse, the fetch loop below just
-      // digs through more pages to accumulate enough streamable titles, in date order.
+      // date and never surface genuinely new-but-obscure releases).
       if (currentMode === 'tv') {
         params.sort_by = 'first_air_date.desc';
         params['first_air_date.lte'] = todayStr;
@@ -613,7 +648,7 @@ async function discoverMovies() {
   }
 
   // USP: we show EVERYTHING and let the left-hand filters (title, year, language,
-  // genre, cast, OTT) do all the narrowing. We deliberately do NOT apply any
+  // genre, cast) do all the narrowing. We deliberately do NOT apply any
   // vote-count minimum here - even a title with a single vote must show up.
   // Low-confidence ratings are only re-ranked (see weightedRating), never hidden.
 
@@ -643,9 +678,6 @@ async function discoverMovies() {
     if (language) params.with_original_language = language;
     if (castQuery) params.with_cast = castQuery;
     if (genre) params.with_genres = genre;
-    // We intentionally DO NOT use server-side OTT filtering (with_watch_monetization_types) here.
-    // TMDb's native server-side OTT filter completely hides titles with missing streaming data,
-    // which breaks our Smart Network Fallback. We handle all OTT filtering client-side.
   }
 
     // FIX (Bug #2 / #3): this used to hard-exclude any title with vote_count below
@@ -663,9 +695,7 @@ async function discoverMovies() {
     let autoFetchAttempts = 0;
     
     // Auto-fetch loop to ensure we get a decent number of results if client-side filters are strict.
-    // The OTT filter is the strictest (many titles have no streaming providers), so when it's on we
-    // allow the loop to dig through more pages to accumulate enough streamable titles - in sort order.
-    const maxAutoFetch = ottOnly ? 25 : 10;
+    const maxAutoFetch = 10;
     while (newResults.length < 15 && autoFetchAttempts < maxAutoFetch) {
       params.page = currentApiPage;
       let data = await fetchFromTMDb(endpoint, params);
@@ -701,32 +731,7 @@ async function discoverMovies() {
         );
       }
 
-      // Per-movie OTT verification (runs globally for both search and discover)
-      // This allows our Smart Network Fallback to catch missing TMDb data.
-      if (ottOnly && pageResults.length > 0) {
-        try {
-          const providerPromises = pageResults.map(async (movie) => {
-            try {
-              // Exclude future-dated unreleased titles from OTT verification
-              const todayStr = new Date().toISOString().split('T')[0];
-              const releaseStr = movie.release_date || movie.first_air_date;
-              if (releaseStr && releaseStr > todayStr) {
-                return { movie, hasStream: false };
-              }
 
-              const res = await fetchFromTMDb(`${currentMode}/${movie.id}`, { append_to_response: 'watch/providers' });
-              return { movie, hasStream: checkHasStreamProviders(res) };
-            } catch (err) {
-              console.error(`Error fetching providers for TV/Movie ${movie.id}:`, err);
-              return { movie, hasStream: false };
-            }
-          });
-          const streamStatus = await Promise.all(providerPromises);
-          pageResults = streamStatus.filter(s => s.hasStream).map(s => s.movie);
-        } catch (err) {
-          console.error("Error filtering OTT movies client-side:", err);
-        }
-      }
       
       if (pageResults.length > 0) {
         newResults = newResults.concat(pageResults);
@@ -1141,7 +1146,7 @@ async function openMovieDetails(movieId) {
         .join('');
     }
 
-    renderWatchProviders(details);
+    await renderWatchProviders(details);
   } catch (err) {
     console.error('Failed to fetch watch providers:', err);
     if (providersContainer) {
@@ -1153,7 +1158,7 @@ async function openMovieDetails(movieId) {
 /**
  * Render watch providers (OTT streaming services) inside the dialog
  */
-function renderWatchProviders(details) {
+async function renderWatchProviders(details) {
   const container = document.getElementById('dialog-providers-container');
   const rentContainer = document.getElementById('dialog-rent-container');
   const rentSection = document.getElementById('dialog-rent-section');
@@ -1320,17 +1325,73 @@ function renderWatchProviders(details) {
     if (flatrateList.length === 0) {
       if (isFutureRelease) {
         container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms (unreleased).</span>';
-      } else if (isRecentMovie) {
-        container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms (likely in theaters).</span>';
       } else {
-        container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms.</span>';
+        // Fallback to Watchmode API if TMDb is empty and Watchmode API Key is available
+        let watchmodeSources = null;
+        if (watchmodeApiKey) {
+          container.innerHTML = '<div class="spinner" style="display:inline-block; margin-right:0.5rem; width:14px; height:14px;"></div><span class="text-muted">Checking Watchmode...</span>';
+          watchmodeSources = await fetchFromWatchmode(details.id, currentMode);
+        }
+
+        if (watchmodeSources && watchmodeSources.length > 0) {
+          container.innerHTML = '';
+          // Filter to subscriptions (type "sub" or "free") for India or US
+          const subSources = watchmodeSources.filter(s => s.type === 'sub' || s.type === 'free');
+          
+          if (subSources.length > 0) {
+            subSources.forEach(source => {
+              const key = `${source.source_id}-${source.name}`;
+              if (!seenFlatrate.has(key)) {
+                seenFlatrate.add(key);
+                flatrateList.push({
+                  provider_id: source.source_id,
+                  provider_name: source.name,
+                  logo_path: null, // Watchmode logo handling is more complex, fallback to name/default icon
+                  country: source.region || 'Global'
+                });
+              }
+            });
+          }
+        }
+
+        // If STILL empty after Watchmode (or if Watchmode wasn't queried)
+        if (flatrateList.length === 0) {
+          // Check Gemini AI first
+          let aiPrediction = null;
+          if (geminiApiKey) {
+            container.innerHTML = '<div class="spinner" style="display:inline-block; margin-right:0.5rem; width:14px; height:14px;"></div><span class="text-muted">Asking AI...</span>';
+            aiPrediction = await predictOttWithGemini(details);
+          }
+
+          const hasEmptyProviderData = !results || Object.keys(results).length === 0;
+          const lang = details.original_language;
+          const ottHeavyLangs = ['hi', 'bn', 'ta', 'te', 'ml', 'kn', 'mr', 'pa', 'gu', 'en', 'ko', 'ja'];
+          const hasSuggestions = hasEmptyProviderData && lang && ottHeavyLangs.includes(lang);
+
+          if (aiPrediction || hasSuggestions) {
+            container.innerHTML = '<span class="text-muted" style="display:block;margin-bottom:0.5rem;">Streaming data unavailable — check these platforms:</span>';
+            
+            if (aiPrediction) {
+              container.dataset.aiPrediction = aiPrediction;
+            }
+            if (hasSuggestions) {
+              container.dataset.suggestionLang = lang;
+            } else {
+              // Mock language to trigger render loop for AI pill even if not in heavy lang list
+              container.dataset.suggestionLang = 'en';
+            }
+          } else {
+            container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms.</span>';
+          }
+        }
       }
     }
 
   // Map of TMDb provider_id → domain for Google site: queries.
   // All OTT pills intentionally use Google for more reliable title-to-page matching.
   const PROVIDER_DOMAINS = {
-    8: 'netflix.com',             // Netflix
+    8: 'netflix.com',             // Netflix (TMDb)
+    203: 'netflix.com',           // Netflix (Watchmode)
     175: 'netflix.com',           // Netflix Kids
     9: 'primevideo.com',          // Amazon Prime Video (GB)
     119: 'primevideo.com',        // Amazon Prime Video (IN)
@@ -1394,6 +1455,158 @@ function renderWatchProviders(details) {
   const movieYear = mDate ? mDate.split('-')[0] : '';
   const langSuffix = getLanguageSuffix(details.original_language);
 
+  // Render deferred "Check on..." suggestion pills (set earlier when no provider data was found)
+  if (container.dataset.suggestionLang) {
+    const suggestionsByLang = {
+      'hi': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 392, name: 'JioCinema' },
+        { id: 122, name: 'Disney+ Hotstar' },
+        { id: 232, name: 'Zee5' },
+        { id: 237, name: 'Sony LIV' }
+      ],
+      'bn': [
+        { id: 315, name: 'Hoichoi' },
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 232, name: 'Zee5' },
+        { id: 10004, name: 'Addatimes' }
+      ],
+      'ta': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 122, name: 'Disney+ Hotstar' },
+        { id: 232, name: 'Zee5' },
+        { id: 237, name: 'Sony LIV' }
+      ],
+      'te': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 122, name: 'Disney+ Hotstar' },
+        { id: 232, name: 'Zee5' }
+      ],
+      'ml': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 122, name: 'Disney+ Hotstar' },
+        { id: 232, name: 'Zee5' },
+        { id: 237, name: 'Sony LIV' }
+      ],
+      'kn': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 122, name: 'Disney+ Hotstar' },
+        { id: 232, name: 'Zee5' }
+      ],
+      'mr': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 232, name: 'Zee5' },
+        { id: 237, name: 'Sony LIV' }
+      ],
+      'pa': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 392, name: 'JioCinema' },
+        { id: 232, name: 'Zee5' }
+      ],
+      'gu': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 392, name: 'JioCinema' },
+        { id: 232, name: 'Zee5' }
+      ],
+      'en': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 337, name: 'Disney+' },
+        { id: 350, name: 'Apple TV+' },
+        { id: 384, name: 'Max' }
+      ],
+      'ko': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 337, name: 'Disney+' },
+        { id: 350, name: 'Apple TV+' }
+      ],
+      'ja': [
+        { id: 8, name: 'Netflix' },
+        { id: 9, name: 'Amazon Prime Video' },
+        { id: 283, name: 'Crunchyroll' },
+        { id: 337, name: 'Disney+' }
+      ]
+    };
+
+    const suggestLang = container.dataset.suggestionLang;
+    const aiPredictionName = container.dataset.aiPrediction;
+    let suggestions = suggestionsByLang[suggestLang] || [];
+    delete container.dataset.suggestionLang;
+    delete container.dataset.aiPrediction;
+
+    // Render AI predicted pill first
+    if (aiPredictionName) {
+      if (aiPredictionName === 'RATE_LIMIT_EXCEEDED') {
+        const pill = document.createElement('div');
+        pill.className = 'provider-pill provider-pill--ai-suggested';
+        pill.style.opacity = '0.6';
+        pill.style.cursor = 'not-allowed';
+        pill.innerHTML = `
+          <i data-lucide="info" class="small-icon"></i>
+          <span>AI Prediction not available</span>
+        `;
+        container.appendChild(pill);
+      } else {
+        // Create a mock provider object for the URL builder
+        const aiProvider = { provider_id: 0, provider_name: aiPredictionName };
+        
+        // Look up its ID if it exists in our list so the Google intent mapping works perfectly
+        const match = suggestions.find(s => s.name.toLowerCase() === aiPredictionName.toLowerCase());
+        if (match) aiProvider.provider_id = match.id;
+
+        const href = buildGoogleProviderSearchUrl(movieTitle, movieYear, langSuffix, aiProvider, 'watch');
+
+        const pill = document.createElement('a');
+        pill.className = 'provider-pill provider-pill--ai-suggested';
+        pill.href = href;
+        pill.target = '_blank';
+        pill.rel = 'noopener noreferrer';
+        pill.title = `AI Predicted: Check "${movieTitle}" on ${aiPredictionName}`;
+
+        pill.innerHTML = `
+          <i data-lucide="sparkles" class="small-icon"></i>
+          <span>AI Prediction: ${aiPredictionName}</span>
+        `;
+
+        container.appendChild(pill);
+        
+        // Remove the predicted provider from the remaining suggestions to avoid duplicates
+        suggestions = suggestions.filter(s => s.name.toLowerCase() !== aiPredictionName.toLowerCase());
+      }
+    }
+
+    // Render remaining standard suggestion pills
+    suggestions.forEach(provider => {
+      const href = buildGoogleProviderSearchUrl(movieTitle, movieYear, langSuffix, { provider_id: provider.id, provider_name: provider.name }, 'watch');
+
+      const pill = document.createElement('a');
+      pill.className = 'provider-pill provider-pill--suggestion';
+      pill.href = href;
+      pill.target = '_blank';
+      pill.rel = 'noopener noreferrer';
+      pill.title = `Check "${movieTitle}" on ${provider.name}`;
+
+      pill.innerHTML = `
+        <span>Check ${provider.name}</span>
+      `;
+
+      container.appendChild(pill);
+    });
+
+    // Initialize newly created dynamic icons (like the sparkles on the AI pill)
+    lucide.createIcons();
+  }
+
   flatrateList.forEach(provider => {
     const href = buildGoogleProviderSearchUrl(movieTitle, movieYear, langSuffix, provider, 'watch');
 
@@ -1448,25 +1661,40 @@ function renderWatchProviders(details) {
 function setupEventListeners() {
   
   // API Key submission
-  apiKeyForm.addEventListener('submit', (e) => {
+  apiKeyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const key = apiKeyInput.value.trim();
-    if (key) {
-      tmdbApiKey = key;
-      localStorage.setItem('tmdb_api_key', key);
-      hideApiOverlay();
-      
-      // Clear previous inputs to prevent mismatching ID systems
-      clearBtn.click();
-      
-      // Auto trigger default search
-      discoverMovies();
-    }
+    const watchmodeKey = watchmodeKeyInput.value.trim();
+    const geminiKey = geminiKeyInput.value.trim();
+    
+    // Assign to in-memory variables
+    tmdbApiKey = key;
+    watchmodeApiKey = watchmodeKey;
+    geminiApiKey = geminiKey;
+
+    // Persist to backend .env
+    await fetch('/keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        'TMDB_API_KEY': tmdbApiKey,
+        'WATCHMODE_API_KEY': watchmodeApiKey,
+        'GEMINI_API_KEY': geminiApiKey
+      })
+    });
+
+    apiOverlay.classList.add('hidden');
+    clearBtn.click();
+    discoverMovies();
   });
 
   // Settings button to re-enter key
   changeKeyBtn.addEventListener('click', () => {
-    showApiOverlay();
+    apiKeyInput.value = tmdbApiKey;
+    watchmodeKeyInput.value = watchmodeApiKey;
+    geminiKeyInput.value = geminiApiKey;
+    apiOverlay.classList.remove('hidden');
+    apiKeyInput.focus();
   });
 
   // Theme toggle button trigger
@@ -1492,6 +1720,16 @@ function setupEventListeners() {
       }
       
       setTimeout(() => {
+        // Fallback if window.close() is blocked by browser security
+        document.body.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#0f172a; color:white; font-family:system-ui, sans-serif;">
+            <h1 style="margin-bottom: 1rem; color: #ef4444;">Server Shut Down</h1>
+            <p style="color: #94a3b8; text-align: center; max-width: 400px; line-height: 1.5;">
+              The Python development server has been stopped.<br>
+              You can now safely close this browser tab.
+            </p>
+          </div>
+        `;
         window.close();
       }, 1000);
     });
@@ -1536,7 +1774,7 @@ function setupEventListeners() {
     yearInput.value = '';
     languageSelect.value = '';
     if (genreSelect) genreSelect.value = '';
-    if (ottOnlyCheckbox) ottOnlyCheckbox.checked = false;
+
     updateHasValue();
     
     // Reset pagination state
@@ -1579,13 +1817,7 @@ function setupEventListeners() {
     discoverMovies();
   });
 
-  // Automatic filtering when checking/unchecking OTT checkbox
-  if (ottOnlyCheckbox) {
-    ottOnlyCheckbox.addEventListener('change', () => {
-      currentPage = 1;
-      discoverMovies();
-    });
-  }
+
 
   // Automatic filtering when typing in the title search field (debounced to avoid API spam)
   if (titleInput) {
@@ -1872,17 +2104,33 @@ function applyTheme() {
 
 // --- Initialization ---
 
-function init() {
+async function init() {
   applyTheme();
   setupEventListeners();
 
-  if (!tmdbApiKey) {
-    showApiOverlay();
-  } else {
-    hideApiOverlay();
-    // Pre-discover results if API Key is already set
-    discoverMovies();
+  try {
+    const res = await fetch('/keys');
+    const keys = await res.json();
+    
+    // Default fallback keys if missing from .env
+    tmdbApiKey = keys['TMDB_API_KEY'] || 'b90551ebe60ebd6e1c86724efd295ee0';
+    watchmodeApiKey = keys['WATCHMODE_API_KEY'] || 'LyV3pQaLPnoSIOx9zleDUKPtlukR7tzAKdpC1VHT';
+    geminiApiKey = keys['GEMINI_API_KEY'] || '';
+
+    // Populate inputs in the settings overlay to always reflect active keys
+    apiKeyInput.value = tmdbApiKey;
+    watchmodeKeyInput.value = watchmodeApiKey;
+    geminiKeyInput.value = geminiApiKey;
+
+  } catch (err) {
+    console.error('Failed to load keys from backend:', err);
+    // Hardcoded fallbacks if server endpoint fails completely
+    tmdbApiKey = 'b90551ebe60ebd6e1c86724efd295ee0';
+    watchmodeApiKey = 'LyV3pQaLPnoSIOx9zleDUKPtlukR7tzAKdpC1VHT';
   }
+
+  // Pre-discover results on load
+  discoverMovies();
 }
 
 // Start application

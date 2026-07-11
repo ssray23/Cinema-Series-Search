@@ -29,11 +29,25 @@
           <label for="api-key-input">TMDb API Key (v3)</label>
           <div class="input-with-icon">
             <i data-lucide="lock"></i>
-            <input type="password" id="api-key-input" placeholder="e.g. 8f1b...52cb" required autocomplete="off">
+            <input type="password" id="api-key-input" placeholder="Required for all searches" autocomplete="off">
+          </div>
+        </div>
+        <div class="input-group" style="margin-top: 1rem;">
+          <label for="watchmode-key-input">Watchmode API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional Fallback)</span></label>
+          <div class="input-with-icon">
+            <i data-lucide="lock"></i>
+            <input type="password" id="watchmode-key-input" placeholder="e.g. LyV3pQaLP... (Used when TMDb fails)" autocomplete="off">
+          </div>
+        </div>
+        <div class="input-group" style="margin-top: 1rem;">
+          <label for="gemini-key-input">Gemini API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional AI Prediction)</span></label>
+          <div class="input-with-icon">
+            <i data-lucide="lock"></i>
+            <input type="password" id="gemini-key-input" placeholder="e.g. AIzaSy... (Used as final fallback)" autocomplete="off">
           </div>
         </div>
         <div class="api-help">
-          <p>Don't have a key? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">Get a TMDb API Key <i data-lucide="external-link" class="small-icon"></i></a> (It's free!)</p>
+          <p>Don't have keys? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">TMDb Key</a> | <a href="https://v2.api.watchmode.com/" target="_blank" rel="noopener noreferrer">Watchmode Key</a> | <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Gemini Key</a></p>
         </div>
         <button type="submit" class="btn btn-primary btn-full">
           <span>Save API Key</span>
@@ -219,15 +233,6 @@
                 </select>
               </div>
             </div>
-          </div>
-
-          <!-- OTT Streaming Filter -->
-          <div class="input-group checkbox-group">
-            <label class="checkbox-label" for="ott-only-checkbox">
-              <input type="checkbox" id="ott-only-checkbox">
-              <span class="custom-checkbox"></span>
-              <span class="label-text">Only show titles available to stream on OTTs</span>
-            </label>
           </div>
 
           <div class="form-actions">

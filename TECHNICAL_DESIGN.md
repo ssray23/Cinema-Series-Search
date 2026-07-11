@@ -104,13 +104,13 @@ params = {
 ## Smart Fetch Strategy
 
 ### The Problem
-When OTT filtering is enabled, many results from TMDb have **no streaming provider data**, causing the client-side OTT filter to strip entire pages of results, leaving only a handful of tiles.
+When sorting by TMDb's native `vote_average.desc` (Ranking), TMDb sorts by rating alone. This returns a pathological tail first: obscure titles with 1 vote and a 10.0 rating (e.g. festival shorts or unreleased films) instead of genuinely highly-rated mainstream films.
 
 ### The Solution: Adaptive Pool Selection
 
 #### **Ranking Sort (vote_average.desc)**
-- **Without adaptive logic:** TMDb's `vote_average.desc` sorts by rating alone, returning the pathological tail first: obscure titles with 1 vote and a 10.0 rating (festival shorts, unreleased films). Almost none have OTT data.
-- **With adaptive logic:** We fetch by `popularity.desc` (a real, broad pool including low-vote recent OTT releases) and apply `weightedRating()` client-side to re-order by confidence-dampened ratings. Nothing is hidden; the low-vote titles are just ranked fairly.
+- **Without adaptive logic:** Returns the 10.0-rated obscure tail.
+- **With adaptive logic:** We fetch by `popularity.desc` (a broad pool of mainstream titles) and apply `weightedRating()` client-side to re-order by confidence-dampened ratings. Nothing is hidden; the titles are just ranked fairly based on the Bayesian average.
 
 ```javascript
 if (currentSort === 'vote_average.desc') {
@@ -120,25 +120,22 @@ if (currentSort === 'vote_average.desc') {
 ```
 
 #### **Release Date Sort**
-- **Without OTT filter:** Use true date sort (`primary_release_date.desc` or `first_air_date.desc`) to ensure genuine newest-first order, even for obscure titles
-- **With OTT filter:** Use true date sort (same), but **increase the fetch loop budget** from 10 to 25 pages so that even if 80% of results lack OTT data, the loop digs deeper to accumulate enough streamable titles while preserving date order
-
-```javascript
-const maxAutoFetch = ottOnly ? 25 : 10;
-while (newResults.length < 15 && autoFetchAttempts < maxAutoFetch) { ... }
-```
+- Use true date sort (`primary_release_date.desc` or `first_air_date.desc`) to ensure genuine newest-first order.
 
 #### **Popularity Sort (vote_count.desc)**
-- Replaced TMDb's native `popularity.desc` (which favors recent/unvoted releases) with `vote_count.desc` to align with the human expectation that "Popularity" means "Most Reviewed".
+- Replaced TMDb's native `popularity.desc` (which favors recent/unvoted releases heavily) with `vote_count.desc` to align with the human expectation that "Popularity" implies "Most Reviewed/Watched".
 
 ### Auto-Pagination Loop
+To ensure we always show a healthy number of results per page (accounting for client-side filtering of genres or languages when using the title search pipeline), we use an auto-pagination loop that digs up to 10 pages deep:
+
 ```javascript
 let newResults = [];
 let currentApiPage = currentPage;
+const maxAutoFetch = 10;
 while (newResults.length < 15 && autoFetchAttempts < maxAutoFetch) {
   let data = await fetchFromTMDb(endpoint, params);
   
-  // Apply all client-side filters (fuzzy title match, language, genre, OTT check)
+  // Apply all client-side filters (fuzzy title match, language, genre)
   pageResults = applyClientFilters(data.results);
   
   if (pageResults.length > 0) {
@@ -151,26 +148,25 @@ while (newResults.length < 15 && autoFetchAttempts < maxAutoFetch) {
 }
 ```
 
-**Key insight:** The loop accumulates results *in sort order*. When OTT filtering strips results, the next page's newest or highest-popularity titles still come in their correct sequence.
+**Key insight:** The loop accumulates results *in sort order*. If client-side filters strip results, the next page's titles still come in their correct sequence.
 
 ---
 
 ## OTT Verification Pipeline
 
 ### Primary: TMDb Watch Providers API
-When `ottOnly` is checked:
+When a user clicks on a movie tile, the app dynamically fetches the title's details and watch providers on-demand:
 
 ```javascript
-for (const movie of pageResults) {
-  const res = await fetchFromTMDb(`movie/${movie.id}`, {
+async function openDetailDialog(movieId) {
+  const details = await fetchFromTMDb(`${currentMode}/${movieId}`, {
     append_to_response: 'watch/providers'
   });
-  const hasOtt = checkHasStreamProviders(res);
-  if (hasOtt) keep(movie);
+  // ...
 }
 ```
 
-**Cost:** One extra API call per candidate title (the expensive filter)
+**Cost:** One extra API call per click, avoiding rate limits from bulk-checking titles.
 
 **Data structure:**
 ```javascript
@@ -493,10 +489,7 @@ Actor search results are cached client-side to avoid re-fetching the same autoco
 ### 3. Lazy Detail Modal
 Watch-provider and detail data is only fetched when the user clicks on a card (not on initial tile render).
 
-### 4. Batch OTT Verification
-When `ottOnly` is checked, the OTT filter is applied **after** other client-side filters (fuzzy title match, genre, language), reducing the number of expensive watch-provider API calls.
-
-### 5. Image Lazy Loading
+### 4. Image Lazy Loading
 Tile backdrop images are fetched from TMDb's CDN; the `<img>` tags use native browser lazy loading where supported.
 
 ---

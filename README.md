@@ -120,6 +120,14 @@ CineSearch uses an intelligent three-stage pipeline to balance **speed** (fewer 
    - The fetch loop targets **15+ results per page** and stops after max 10 pages of attempts.
    - **Important**: The loop accumulates results *in sort order* — when filtering strips a page, the next page's newest or highest-rated titles still preserve their intended order
 
+### 🤖 Tri-API OTT Discovery Fallback
+
+Finding accurate streaming rights (especially for regional and newly released titles) is notoriously difficult. CineSearch implements a robust three-stage fallback system when you click a title card:
+
+1. **TMDb Provider API**: Fast and native. If TMDb knows where it's streaming, it displays the pills immediately.
+2. **Watchmode API (Fallback 1)**: If TMDb fails, the app automatically queries Watchmode's API, which often has more up-to-date data for obscure titles.
+3. **Gemini AI with Google Search Grounding (Fallback 2)**: If both databases return zero flatrate streaming options, CineSearch asks Gemini 2.5 Flash to predict the most likely platform. By utilizing **Google Search Grounding**, the AI actively searches the live internet for recent news articles regarding the film's streaming rights (e.g. "Zee5 acquires rights for...") rather than blindly guessing, giving you the most accurate real-time prediction possible!
+
 ### Ranking Without Exclusion
 
 The `weightedRating()` function (line 456) ensures low-vote titles don't get hidden:

@@ -242,23 +242,14 @@ body.light-theme .genre-pill {
   left: -100px;
 }
 
-/* --- Scrollbar Customization --- */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* --- Scrollbar Customization (Native Auto-hiding) --- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(10, 14, 23, 0.5);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+body.light-theme * {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 /* --- Utility Classes / Common Components --- */
@@ -395,26 +386,7 @@ body.light-theme .api-card {
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
-.api-card::-webkit-scrollbar {
-  width: 6px;
-}
 
-.api-card::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.api-card::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-}
-
-body.light-theme .api-card::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.api-card::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
 
 .api-header {
   text-align: center;
@@ -1279,22 +1251,7 @@ body.light-theme .header-control:hover {
   background: var(--dialog-bg) !important;
 }
 
-.detail-dialog::-webkit-scrollbar {
-  width: 6px;
-}
 
-.detail-dialog::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.detail-dialog::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-
-body.light-theme .detail-dialog::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-}
 
 .detail-dialog[open] {
   opacity: 1;

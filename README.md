@@ -17,10 +17,9 @@ A sleek, premium movie and TV series discovery web app powered by [The Movie Dat
 - **Release Year / First Air Date** — Filter by a specific year.
 - **Original Language** — Filter by the title's original production language (Hindi, Bengali, English, French, Japanese, etc.).
 - **Dynamic Genres** — Filter by genres matching the active mode (e.g. Clapperboard updates dynamically to Movie genres or TV genres).
-- **OTT Only** — Tick the checkbox to show only titles available for flatrate streaming on OTT platforms in your region.
 
 ### ⚡ Fully Reactive
-Every filter updates results **instantly** — no need to hit a search button. Changing any criteria (title, year, language, genre, OTT toggle, or sort order) automatically refreshes the results in real time.
+Every filter updates results **instantly** — no need to hit a search button. Changing any criteria (title, year, language, genre, or sort order) automatically refreshes the results in real time.
 
 ### 🎭 Media Detail Card
 Click any card to open a full-detail modal showing:
@@ -37,7 +36,7 @@ The app intelligently switches between two TMDb API pipelines:
 - **Discover mode** (`/discover/movie` & `/discover/tv`) — when actor/actress is selected (without a title). Genre, language, and year are applied natively via TMDb API parameters.
 
 ### 🎯 "Show Everything" Philosophy
-- **No vote-count hiding** — Even a title with a single vote appears in results. The left-hand filters (title, year, language, genre, cast, OTT) are the only constraints.
+- **No vote-count hiding** — Even a title with a single vote appears in results. The left-hand filters (title, year, language, genre, cast) are the only constraints.
 - **Smart ranking without exclusion** — The **Ranking** sort uses a `weightedRating` formula that dampens low-confidence (few-vote) titles down in the list instead of hiding them. A fresh OTT original with 2 votes and a 9.0 average still shows; it just ranks lower than a 5,000-vote 8.0 average.
 
 ---
@@ -82,8 +81,6 @@ Then open [http://localhost:8080](http://localhost:8080) in your browser.
 ### Basic Title Search
 1. Type a title in the **Title / Keyword** field — results appear as you type.
 2. Optionally add a **Year**, **Language**, or **Genre** to narrow results.
-3. Tick **Only show titles available to stream on OTTs** to filter for streaming availability.
-
 ### Cast Search (Find Collaborative Titles)
 1. Type an actor's name in the **Actor** field and select from autocomplete suggestions.
 2. Optionally do the same for **Actress**.
@@ -118,13 +115,10 @@ CineSearch uses an intelligent three-stage pipeline to balance **speed** (fewer 
    - Title fuzzy-match (when title is typed)
    - Language filter (exact match on `original_language`)
    - Genre filter (quick `Array.includes`)
-   - **OTT verification** (the expensive one): For each candidate title, fetch its provider details from TMDb's `/watch/providers` endpoint and check if it's streamable in your region
 
 3. **Auto-pagination with smart loop**
-   - The fetch loop targets **15+ results per page** and adapts:
-     - **OTT off**: Stops after max 10 pages of attempts (most filters are cheap)
-     - **OTT on**: Allows up to 25 pages (each title requires an extra API call to verify providers, so it digs deeper to accumulate enough streamable titles)
-   - **Important**: The loop accumulates results *in sort order* — when OTT filtering strips 80% of a page, the next page's newest or highest-rated titles still preserve their intended order
+   - The fetch loop targets **15+ results per page** and stops after max 10 pages of attempts.
+   - **Important**: The loop accumulates results *in sort order* — when filtering strips a page, the next page's newest or highest-rated titles still preserve their intended order
 
 ### Ranking Without Exclusion
 

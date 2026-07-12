@@ -14,55 +14,80 @@
   <div class="bg-glow bg-glow-1"></div>
   <div class="bg-glow bg-glow-2"></div>
 
-  <!-- API Key Setup Overlay -->
+  <!-- Settings Overlay (Tabbed) -->
   <div id="api-key-overlay" class="overlay hidden">
     <div class="glass-card api-card">
+      <button id="close-settings-btn" class="close-modal-btn" title="Close Settings">
+        <i data-lucide="x"></i>
+      </button>
       <div class="api-header">
         <div class="icon-wrapper">
-          <i data-lucide="key-round" class="accent-color"></i>
+          <i data-lucide="settings" class="accent-color"></i>
         </div>
-        <h2>Configure TMDb API Access</h2>
-        <p>This application queries The Movie Database (TMDb) directly from your browser. Your API key is stored securely in your browser's local storage.</p>
+        <h2>Settings</h2>
       </div>
-      <form id="api-key-form">
-        <div class="input-group">
-          <label for="api-key-input">TMDb API Key (v3)</label>
-          <div class="input-with-icon">
-            <i data-lucide="lock"></i>
-            <input type="password" id="api-key-input" placeholder="Required for all searches" autocomplete="off">
-          </div>
-        </div>
-        <div class="input-group" style="margin-top: 1rem;">
-          <label for="watchmode-key-input">Watchmode API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional Fallback)</span></label>
-          <div class="input-with-icon">
-            <i data-lucide="lock"></i>
-            <input type="password" id="watchmode-key-input" placeholder="e.g. LyV3pQaLP... (Used when TMDb fails)" autocomplete="off">
-          </div>
-        </div>
-        <div class="input-group" style="margin-top: 1rem;">
-          <label for="gemini-key-input">Gemini API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional AI Prediction)</span></label>
-          <div class="input-with-icon">
-            <i data-lucide="lock"></i>
-            <input type="password" id="gemini-key-input" placeholder="e.g. AIzaSy... (Used as final fallback)" autocomplete="off">
-          </div>
-        </div>
-        <div class="input-group" style="margin-top: 1rem;">
-          <label for="anthropic-key-input">Anthropic API Key <span style="font-weight: normal; color: var(--text-muted);">(AI Prediction fallback if Gemini rate-limits)</span></label>
-          <div class="input-with-icon">
-            <i data-lucide="lock"></i>
-            <input type="password" id="anthropic-key-input" placeholder="e.g. sk-ant-api03-..." autocomplete="off">
-          </div>
-        </div>
-        <div class="api-help">
-          <p>Don't have keys? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">TMDb Key</a> | <a href="https://v2.api.watchmode.com/" target="_blank" rel="noopener noreferrer">Watchmode Key</a> | <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Gemini Key</a> | <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic Key</a></p>
-        </div>
-        <button type="submit" class="btn btn-primary btn-full">
-          <span>Save API Key</span>
-          <i data-lucide="arrow-right"></i>
+
+      <!-- Tab Bar -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-pane="pane-api-keys">
+          <i data-lucide="key-round"></i> API Keys
         </button>
-      </form>
+        <button class="settings-tab" data-pane="pane-ott">
+          <i data-lucide="sparkles"></i> AI OTT List
+        </button>
+      </div>
+
+      <!-- Pane 1: API Keys -->
+      <div class="settings-pane active" id="pane-api-keys">
+        <form id="api-key-form">
+          <div class="input-group">
+            <label for="api-key-input">TMDb API Key (v3)</label>
+            <div class="input-with-icon">
+              <i data-lucide="lock"></i>
+              <input type="password" id="api-key-input" placeholder="Required for all searches" autocomplete="off">
+            </div>
+          </div>
+          <div class="input-group" style="margin-top: 1rem;">
+            <label for="watchmode-key-input">Watchmode API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional Fallback)</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="lock"></i>
+              <input type="password" id="watchmode-key-input" placeholder="e.g. LyV3pQaLP... (Used when TMDb fails)" autocomplete="off">
+            </div>
+          </div>
+          <div class="input-group" style="margin-top: 1rem;">
+            <label for="gemini-key-input">Gemini API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional AI Prediction)</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="lock"></i>
+              <input type="password" id="gemini-key-input" placeholder="e.g. AIzaSy... (Used as final fallback)" autocomplete="off">
+            </div>
+          </div>
+          <div class="input-group" style="margin-top: 1rem;">
+            <label for="anthropic-key-input">Anthropic API Key <span style="font-weight: normal; color: var(--text-muted);">(AI Prediction fallback if Gemini rate-limits)</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="lock"></i>
+              <input type="password" id="anthropic-key-input" placeholder="e.g. sk-ant-api03-..." autocomplete="off">
+            </div>
+          </div>
+          <div class="api-help">
+            <p>Don't have keys? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">TMDb Key</a> | <a href="https://api.watchmode.com/" target="_blank" rel="noopener noreferrer">Watchmode Key</a> | <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Gemini Key</a> | <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic Key</a></p>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">
+            <span>Save API Keys</span>
+            <i data-lucide="arrow-right"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- Pane 2: AI OTT List -->
+      <div class="settings-pane" id="pane-ott">
+        <p class="ott-pane-desc">These platforms are passed to the AI when it searches for streaming availability. Add, rename, or remove platforms to customise predictions.</p>
+        <div id="ott-platform-list" class="ott-list">
+          <!-- Chips rendered by renderOttList() -->
+        </div>
+      </div>
     </div>
   </div>
+
 
   <!-- Main Application Wrapper -->
   <div class="app-container">

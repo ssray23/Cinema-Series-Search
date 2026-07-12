@@ -186,7 +186,7 @@ If TMDb's watch providers returns empty, the app queries the Watchmode API via a
 
 ### Fallback 2: Gemini AI (Google Search Grounding)
 If both TMDb and Watchmode return no flatrate options, `predictOttWithGemini(details)` is called — **only if `vote_count > 0`** (see Zero-Vote Guard below):
-- Uses **Gemini 2.5 Flash** with `googleSearch` grounding tool enabled
+- Uses **Gemini 2.5 Flash** with `googleSearch` grounding tool enabled, searching against a dynamically built, user-editable list of OTT platforms stored in `localStorage` (via the "AI OTT List" settings tab).
 - Prompt requires the model to output a strictly structured **JSON response** with explicit `search_summary`, `year_match` (Yes/No), and `explicit_confirmation` (Yes/No) fields. This acts as a Chain-of-Thought (CoT) guardrail to prevent hallucination for obscure films.
 - If the model admits the year doesn't match or explicit OTT rights aren't confirmed, the client-side JSON parser forcibly rejects the prediction and returns `None`.
 - Response is also validated against `groundingMetadata.groundingChunks`: if Gemini returns a platform name but cited no real web sources, the answer is rejected.
@@ -195,36 +195,15 @@ If both TMDb and Watchmode return no flatrate options, `predictOttWithGemini(det
 ### Fallback 3: Anthropic Claude with Web Search (Rate-Limit Failover)
 If Gemini returns HTTP 429 (rate limit exceeded), the app **automatically retries** with `predictOttWithClaude(details)`:
 - Uses **Claude claude-haiku-4-5** via the Anthropic Messages API
-- Enables Anthropic's native **`web_search_20250305`** tool so Claude actively searches the live web (not training data)
+- Enables Anthropic's native **`web_search_20250305`** tool so Claude actively searches the live web (not training data) against the same dynamic user-defined OTT list.
 - Uses the same **JSON CoT parsing** rules as Gemini to enforce year-matching and explicit confirmation checks before predicting a platform.
 - Requires `anthropic-beta: web-search-2025-03-05` and `anthropic-dangerous-direct-browser-access: true` headers
 - `max_tokens: 1024` (web search responses produce multiple content blocks; needed enough room for JSON reasoning)
 - Response parser scans all content blocks in reverse order to find the final text answer (after tool_use/tool_result blocks)
 - If no Gemini key is configured but an Anthropic key is, Claude is used as the primary AI predictor
 
-### Zero-Vote Guard
-Before any AI call is made, `vote_count` is checked:
-```javascript
-const voteCount = details.vote_count ?? 0;
-if (voteCount === 0) {
-  // Skip AI entirely — film is too new/obscure for reliable web data
-  console.log('[OTT Prediction] Skipping AI prediction — vote_count is 0');
-}
-```
-**Rationale:** A film with zero TMDb votes has virtually no web footprint. AI web searches find only rumour/expectation articles ("expected on Netflix", "likely on Zee5") which the model treats as confirmation, producing confident but wrong answers. Films with any votes have real reviews, OTT announcements, and listings that ground the search reliably.
-
-```javascript
-if (voteCount === 0) {
-  // skip
-} else if (geminiApiKey) {
-  aiPrediction = await predictOttWithGemini(details);
-  if (aiPrediction === 'RATE_LIMIT_EXCEEDED' && anthropicApiKey) {
-    aiPrediction = await predictOttWithClaude(details);  // Auto-fallback
-  }
-} else if (anthropicApiKey) {
-  aiPrediction = await predictOttWithClaude(details);    // Primary if no Gemini
-}
-```
+### Safe Fallback (Testing Notes)
+We previously implemented a "Zero-Vote Guard" that prevented the AI from checking streaming availability for titles with 0 votes, assuming they were too new or obscure. However, we found that Gemini 2.5 Flash with Google Search Grounding is robust enough (due to the strict JSON formatting and explicit confirmation requirements) to avoid hallucinating on new regional titles. Thus, the AI is now permitted to search for OTT rights on all released titles, regardless of vote count.
 
 ### Fallback 4: Production Company / Network Name Matching
 **When:** TMDb's `/watch/providers` returns empty or missing data

@@ -75,6 +75,14 @@ let currentTheme = localStorage.getItem('theme') || 'dark';
 let watchlist = JSON.parse(localStorage.getItem('cineSearchWatchlist')) || [];
 let isWatchlistView = false;
 
+// --- AI OTT Platform List (user-editable, persisted to localStorage) ---
+const DEFAULT_OTT_PLATFORMS = [
+  'Netflix', 'YouTube', 'Amazon Prime Video', 'Disney+ Hotstar',
+  'JioCinema', 'Zee5', 'Sony LIV', 'Hoichoi', 'Addatimes',
+  'Sun NXT', 'Aha', 'Waves'
+];
+let ottPlatforms = JSON.parse(localStorage.getItem('cineSearchOttPlatforms')) || [...DEFAULT_OTT_PLATFORMS];
+
 // --- DOM Elements ---
 const apiOverlay = document.getElementById('api-key-overlay');
 const apiKeyForm = document.getElementById('api-key-form');
@@ -305,7 +313,7 @@ CRITICAL RULES — follow strictly:
 3. Only return a platform name if search results EXPLICITLY CONFIRM it is streaming there right now or has confirmed OTT rights.
 4. If search results are unclear, contradictory, or show no confirmed OTT release or rights — return "None".
 5. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
-6. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+6. Only choose from: ${ottPlatforms.join(', ')}.
 
 You MUST reply in exactly this JSON format:
 {
@@ -334,7 +342,9 @@ You MUST reply in exactly this JSON format:
     const data = await response.json();
     
     if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
-      let rawText = data.candidates[0].content.parts[0].text.trim();
+      // Grounded responses may split the text across multiple parts when citations are present. 
+      // We must join all text parts to get the complete JSON string.
+      let rawText = data.candidates[0].content.parts.map(p => p.text || '').join('').trim();
       console.log('[Gemini OTT Prediction] Raw response:', JSON.stringify(rawText));
 
       let prediction = 'None';
@@ -353,16 +363,17 @@ You MUST reply in exactly this JSON format:
         prediction = 'None'; // Fail safely if it skipped CoT
       }
 
-      // Reject if Gemini didn't ground its answer in real search results
+      // Log grounding sources but don't strictly reject if the API omitted them, 
+      // as Gemini sometimes answers from confident knowledge or omits metadata.
       const chunks = data.candidates[0].groundingMetadata?.groundingChunks;
       if (!chunks || chunks.length === 0) {
-        console.warn('[Gemini OTT Prediction] No grounding sources — rejecting as hallucination:', prediction);
-        return null;
+        console.warn('[Gemini OTT Prediction] No grounding sources returned in metadata, but accepting confident prediction:', prediction);
+      } else {
+        console.log('[Gemini OTT Prediction] Grounded on', chunks.length, 'source(s):', chunks.map(c => c.web?.uri).filter(Boolean));
       }
-      console.log('[Gemini OTT Prediction] Grounded on', chunks.length, 'source(s):', chunks.map(c => c.web?.uri).filter(Boolean));
 
       // Strictly validate: must exactly match a known platform name
-      const validPlatforms = ['Netflix', 'YouTube', 'Amazon Prime Video', 'Disney+ Hotstar', 'JioCinema', 'Zee5', 'Sony LIV', 'Hoichoi', 'Addatimes', 'Sun NXT', 'Aha'];
+      const validPlatforms = ottPlatforms;
       if (prediction === 'None' || prediction === 'Unreleased') return null;
       const exact = validPlatforms.find(p => p.toLowerCase() === prediction.toLowerCase());
       if (exact) return exact;
@@ -398,7 +409,7 @@ CRITICAL RULES — follow strictly:
 3. Only return a platform name if results EXPLICITLY CONFIRM it is streaming there right now or has confirmed OTT rights.
 4. If search results are unclear, contradictory, or show no confirmed OTT release or rights — return "None".
 5. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
-6. Only choose from: Netflix, YouTube, Amazon Prime Video, Disney+ Hotstar, JioCinema, Zee5, Sony LIV, Hoichoi, Addatimes, Sun NXT, Aha.
+6. Only choose from: ${ottPlatforms.join(', ')}.
 
 You MUST reply in exactly this JSON format:
 {
@@ -452,7 +463,7 @@ You MUST reply in exactly this JSON format:
         prediction = 'None'; // Fail safely
       }
       
-      const platforms = ['Netflix', 'YouTube', 'Amazon Prime Video', 'Disney+ Hotstar', 'JioCinema', 'Zee5', 'Sony LIV', 'Hoichoi', 'Addatimes', 'Sun NXT', 'Aha'];
+      const platforms = ottPlatforms;
       const matched = platforms.find(p => p.toLowerCase() === prediction.toLowerCase() || prediction.toLowerCase().includes(p.toLowerCase()));
       if (matched) return matched;
       if (prediction === 'None' || prediction === 'Unreleased') return null;
@@ -1633,13 +1644,10 @@ async function renderWatchProviders(details) {
 
         // If STILL empty after Watchmode (or if Watchmode wasn't queried)
         if (flatrateList.length === 0) {
-          // Skip AI prediction for films with zero votes — they're too new/obscure for reliable web data
-          const voteCount = details.vote_count ?? 0;
+          // Removed the zero-vote guard as it was too restrictive for new regional titles
           // Try Gemini AI first, fall back to Anthropic Claude if Gemini rate-limits
           let aiPrediction = null;
-          if (voteCount === 0) {
-            console.log('[OTT Prediction] Skipping AI prediction — vote_count is 0, film too new for reliable data.');
-          } else if (geminiApiKey) {
+          if (geminiApiKey) {
             container.innerHTML = '<div class="spinner" style="display:inline-block; margin-right:0.5rem; width:14px; height:14px;"></div><span class="text-muted">Asking AI...</span>';
             aiPrediction = await predictOttWithGemini(details);
             if (aiPrediction === 'RATE_LIMIT_EXCEEDED' && anthropicApiKey) {
@@ -1704,7 +1712,8 @@ async function renderWatchProviders(details) {
         { id: 392, name: 'JioCinema' },
         { id: 122, name: 'Disney+ Hotstar' },
         { id: 232, name: 'Zee5' },
-        { id: 237, name: 'Sony LIV' }
+        { id: 237, name: 'Sony LIV' },
+        { id: 10006, name: 'Waves' }
       ],
       'bn': [
         { id: 315, name: 'Hoichoi' },
@@ -1896,11 +1905,117 @@ async function renderWatchProviders(details) {
   }
 }
 
+// --- AI OTT Platform List UI ---
+
+function saveOttPlatforms() {
+  localStorage.setItem('cineSearchOttPlatforms', JSON.stringify(ottPlatforms));
+}
+
+function renderOttList() {
+  const listEl = document.getElementById('ott-platform-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  ottPlatforms.forEach((name, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'ott-chip';
+    chip.innerHTML = `
+      <span class="ott-chip-name">${name}</span>
+      <button class="ott-chip-btn ott-chip-edit" title="Rename" data-idx="${idx}">
+        <i data-lucide="pencil"></i>
+      </button>
+      <button class="ott-chip-btn ott-chip-delete" title="Delete" data-idx="${idx}">
+        <i data-lucide="x"></i>
+      </button>
+    `;
+
+    // Edit inline
+    chip.querySelector('.ott-chip-edit').addEventListener('click', () => {
+      const nameSpan = chip.querySelector('.ott-chip-name');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'ott-chip-input';
+      input.value = name;
+      nameSpan.replaceWith(input);
+      input.focus();
+      input.select();
+
+      const confirm = () => {
+        const newVal = input.value.trim();
+        if (newVal && newVal !== ottPlatforms[idx]) {
+          ottPlatforms[idx] = newVal;
+          saveOttPlatforms();
+        }
+        renderOttList();
+      };
+      input.addEventListener('blur', confirm);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); confirm(); } if (e.key === 'Escape') renderOttList(); });
+    });
+
+    // Delete
+    chip.querySelector('.ott-chip-delete').addEventListener('click', () => {
+      ottPlatforms.splice(idx, 1);
+      saveOttPlatforms();
+      renderOttList();
+    });
+
+    listEl.appendChild(chip);
+  });
+
+  // Add row
+  const addRow = document.createElement('div');
+  addRow.className = 'ott-add-row';
+  addRow.innerHTML = `
+    <input type="text" class="ott-new-input" placeholder="Add platform..." />
+    <button class="btn btn-primary ott-add-btn" type="button">Add</button>
+  `;
+  const newInput = addRow.querySelector('.ott-new-input');
+  const addBtn = addRow.querySelector('.ott-add-btn');
+  const doAdd = () => {
+    const val = newInput.value.trim();
+    if (val && !ottPlatforms.find(p => p.toLowerCase() === val.toLowerCase())) {
+      ottPlatforms.push(val);
+      saveOttPlatforms();
+      renderOttList();
+    } else {
+      newInput.value = '';
+      newInput.focus();
+    }
+  };
+  addBtn.addEventListener('click', doAdd);
+  newInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+  listEl.appendChild(addRow);
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 // --- Event Listeners Setup ---
 
 function setupEventListeners() {
   
+  // Settings tab switching
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const pane = document.getElementById(tab.dataset.pane);
+      if (pane) pane.classList.add('active');
+      // Render OTT list lazily when that tab is opened
+      if (tab.dataset.pane === 'pane-ott') renderOttList();
+    });
+  });
+
+  // Settings close button
+  const closeSettingsBtn = document.getElementById('close-settings-btn');
+  if (closeSettingsBtn) {
+    closeSettingsBtn.addEventListener('click', () => {
+      apiOverlay.classList.add('hidden');
+    });
+  }
+
   // API Key submission
+
   apiKeyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const key = apiKeyInput.value.trim();

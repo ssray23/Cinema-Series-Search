@@ -372,6 +372,7 @@ body.light-theme * {
 }
 
 .api-card {
+  position: relative;
   max-width: 480px;
   width: 100%;
   max-height: 90vh;
@@ -383,9 +384,244 @@ body.light-theme * {
 }
 
 body.light-theme .api-card {
+  background: #f0f2f5;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  border: 2px solid #374151;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
 }
 
+body.light-theme .overlay {
+  background: rgba(180, 185, 195, 0.75);
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text);
+}
+
+body.light-theme .close-modal-btn {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .close-modal-btn:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.close-modal-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Settings Tabs --- */
+.settings-tabs {
+  display: flex;
+  gap: 0.375rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.3rem;
+  margin-bottom: 1.5rem;
+}
+
+.settings-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.settings-tab svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.settings-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.settings-tab:not(.active):hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+body.light-theme .settings-tab:not(.active) {
+  background: #dde1e8;
+  color: var(--text-muted);
+}
+
+body.light-theme .settings-tab:not(.active):hover {
+  background: #cdd2db;
+  color: var(--text);
+}
+
+/* Panes */
+.settings-pane {
+  display: none;
+}
+
+.settings-pane.active {
+  display: block;
+}
+
+/* --- OTT Platform List --- */
+.ott-pane-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.ott-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+body.light-theme .ott-list {
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+
+.ott-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  transition: border-color 0.2s;
+}
+
+.ott-chip:hover {
+  border-color: var(--border-accent);
+}
+
+body.light-theme .ott-chip {
+  background: #ffffff;
+  border-color: #d0d5dd;
+}
+
+.ott-chip-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ott-chip-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  outline: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.1rem 0;
+  min-width: 0;
+}
+
+.ott-chip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ott-chip-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.ott-chip-edit:hover {
+  background: rgba(99, 179, 237, 0.15);
+  color: #63b3ed;
+}
+
+.ott-chip-delete:hover {
+  background: rgba(220, 53, 69, 0.15);
+  color: var(--accent);
+}
+
+/* Add platform row */
+.ott-add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.ott-new-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ott-new-input:focus {
+  border-color: var(--accent);
+}
+
+body.light-theme .ott-new-input {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.ott-add-btn {
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
 
 
 .api-header {
@@ -409,7 +645,7 @@ body.light-theme .api-card {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: rgba(230, 115, 115, 0.1);
+  background: var(--accent-glow);
   border: 1px solid var(--border-accent);
   display: flex;
   align-items: center;
@@ -445,6 +681,20 @@ body.light-theme .api-card {
   text-decoration: underline;
 }
 
+/* Match API key inputs size to OTT inputs */
+#api-key-form .input-with-icon input {
+  padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+}
+
+/* Match Save button size to OTT Add button */
+#api-key-form .btn-full {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+}
+
 .small-icon {
   width: 12px;
   height: 12px;
@@ -466,6 +716,11 @@ body.light-theme .api-card {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+.input-group label span {
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .input-with-icon {
@@ -1802,12 +2057,14 @@ body.light-theme .mode-toggle input[type="radio"]:checked + label {
 body.series-mode {
   --accent: #06b6d4; /* Cyan/Blue */
   --accent-glow: rgba(6, 182, 212, 0.4);
+  --border-accent: rgba(6, 182, 212, 0.4);
   --body-bg: linear-gradient(135deg, #132f35 0%, #17181c 100%);
 }
 
 body.light-theme.series-mode {
   --accent: #0891b2;
   --accent-glow: rgba(8, 145, 178, 0.15);
+  --border-accent: rgba(8, 145, 178, 0.4);
   --body-bg: linear-gradient(135deg, #b2f0f4 0%, #f0fbfc 100%);
 }
 
@@ -1847,9 +2104,20 @@ body.light-theme.series-mode .logo-icon {
 
 /* --- Watchlist Feature --- */
 #watchlist-toggle-btn.active {
-  color: var(--red);
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--accent);
+  background: rgba(230, 82, 82, 0.15);
+  border-color: rgba(230, 82, 82, 0.3);
+}
+
+body.series-mode #watchlist-toggle-btn.active {
+  color: var(--accent);
+  background: rgba(6, 182, 212, 0.15);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+body.light-theme.series-mode #watchlist-toggle-btn.active {
+  background: rgba(8, 145, 178, 0.15);
+  border-color: rgba(8, 145, 178, 0.3);
 }
 
 .movie-poster-box {

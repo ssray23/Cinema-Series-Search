@@ -21,6 +21,12 @@ A sleek, premium movie and TV series discovery web app powered by [The Movie Dat
 ### ⚡ Fully Reactive
 Every filter updates results **instantly** — no need to hit a search button. Changing any criteria (title, year, language, genre, or sort order) automatically refreshes the results in real time.
 
+### ❤️ Personal Watchlist
+- **Heart any title** — Click the heart icon on any movie or series poster to save it instantly to your personal Watchlist.
+- **Dedicated View** — Toggle the heart button in the top right to hide search filters and view your saved collection.
+- **Filter & Sort** — Your Watchlist seamlessly integrates with the Cinema/Series mode toggle and all sorting options (Ranking, Popularity, Release Date) completely offline.
+- **Persistent Storage** — Saved securely in your browser's local storage; your list survives tab closes and page refreshes.
+
 ### 🎭 Media Detail Card
 Click any card to open a full-detail modal showing:
 - High-resolution backdrop image

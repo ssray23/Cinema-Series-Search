@@ -71,6 +71,10 @@ let isLoadingMore = false;
 let firstNewCardIndex = -1; // Index where newly loaded cards start (-1 = fresh search)
 let currentTheme = localStorage.getItem('theme') || 'dark';
 
+// --- Watchlist State ---
+let watchlist = JSON.parse(localStorage.getItem('cineSearchWatchlist')) || [];
+let isWatchlistView = false;
+
 // --- DOM Elements ---
 const apiOverlay = document.getElementById('api-key-overlay');
 const apiKeyForm = document.getElementById('api-key-form');
@@ -83,6 +87,8 @@ const shutdownBtn = document.getElementById('shutdown-btn');
 const shutdownOverlay = document.getElementById('shutdown-overlay');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeIcon = document.getElementById('theme-icon');
+const watchlistToggleBtn = document.getElementById('watchlist-toggle-btn');
+const watchlistIcon = document.getElementById('watchlist-icon');
 const titleInput = document.getElementById('title-input');
 const titleClearBtn = document.getElementById('title-clear-btn');
 
@@ -769,9 +775,74 @@ function sortActiveResults() {
 }
 
 /**
+ * Render Watchlist
+ */
+function renderWatchlist() {
+  const filtered = watchlist.filter(m => m.media_type === currentMode);
+  
+  const searchPanel = document.querySelector('.search-panel');
+  if (searchPanel) searchPanel.style.display = 'none';
+  
+  const appTitle = document.getElementById('main-title');
+  if (appTitle) appTitle.textContent = 'My Watchlist';
+  
+  resultsCountText.textContent = `${filtered.length} Saved ${currentMode === 'movie' ? 'Movies' : 'Series'}`;
+  activeSearchResults = filtered;
+  sortActiveResults();
+  totalPages = 1;
+  currentPage = 1;
+  
+  renderMovies(activeSearchResults);
+  paginationContainer.classList.add('hidden');
+}
+
+/**
+ * Toggle Watchlist
+ */
+function toggleWatchlist(movie, event) {
+  event.stopPropagation();
+  const index = watchlist.findIndex(m => m.id === movie.id);
+  const btn = event.currentTarget;
+  
+  const icon = btn.querySelector('i') || btn.querySelector('svg');
+  if (icon) {
+    icon.classList.remove('heart-anim');
+    void icon.offsetWidth;
+    icon.classList.add('heart-anim');
+  }
+
+  if (index === -1) {
+    watchlist.push({ ...movie, media_type: currentMode });
+    btn.classList.add('hearted');
+  } else {
+    watchlist.splice(index, 1);
+    btn.classList.remove('hearted');
+    
+    if (isWatchlistView) {
+      const card = btn.closest('.movie-card');
+      if (card) {
+        card.style.transition = 'all 0.3s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          card.remove();
+          renderWatchlist();
+        }, 300);
+      }
+    }
+  }
+  
+  localStorage.setItem('cineSearchWatchlist', JSON.stringify(watchlist));
+}
+
+/**
  * Discover movies using combinations of active filters (Live API & Fuzzy Search)
  */
 async function discoverMovies() {
+  if (isWatchlistView) {
+    renderWatchlist();
+    return;
+  }
   if (currentPage === 1) {
     showLoader();
     paginationContainer.classList.add('hidden');
@@ -1151,9 +1222,15 @@ function renderMovies(movies) {
     const voteCount = movie.vote_count || 0;
     const voteSpan = voteCount > 0 ? `<span style="font-size: 0.7em; opacity: 0.7; font-weight: 500; margin-left: 2px;">(${voteCount >= 1000 ? (voteCount/1000).toFixed(1) + 'k' : voteCount})</span>` : '';
     
+    const isHearted = watchlist.some(m => m.id === movie.id);
+    const heartClass = isHearted ? 'hearted' : '';
+
     card.innerHTML = `
       <div class="movie-poster-box">
         <img src="${posterUrl}" alt="${movie.title || movie.name}" loading="lazy">
+        <button class="card-watchlist-btn ${heartClass}" aria-label="Toggle Watchlist">
+          <i data-lucide="heart" class="${isHearted ? 'fill-red' : ''}"></i>
+        </button>
         <div class="movie-rating">
           <i data-lucide="star" class="fill-gold"></i>
           <span>${ratingVal}</span>${voteSpan}
@@ -1167,6 +1244,11 @@ function renderMovies(movies) {
         </div>
       </div>
     `;
+    
+    const heartBtn = card.querySelector('.card-watchlist-btn');
+    if (heartBtn) {
+      heartBtn.addEventListener('click', (e) => toggleWatchlist(movie, e));
+    }
     
     card.addEventListener('click', () => openMovieDetails(movie.id));
     moviesGrid.appendChild(card);
@@ -1859,6 +1941,36 @@ function setupEventListeners() {
     apiKeyInput.focus();
   });
 
+  // Watchlist toggle button trigger
+  if (watchlistToggleBtn) {
+    watchlistToggleBtn.addEventListener('click', () => {
+      isWatchlistView = !isWatchlistView;
+      watchlistToggleBtn.classList.toggle('active', isWatchlistView);
+      const icon = watchlistToggleBtn.querySelector('i') || watchlistToggleBtn.querySelector('svg');
+      if (icon) {
+        if (isWatchlistView) {
+          icon.setAttribute('data-lucide', 'heart-off');
+        } else {
+          icon.setAttribute('data-lucide', 'heart');
+        }
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      
+      const searchPanel = document.querySelector('.search-panel');
+      const appMain = document.querySelector('.app-main');
+      if (isWatchlistView) {
+        if (appMain) appMain.style.gridTemplateColumns = '1fr';
+        renderWatchlist();
+      } else {
+        if (searchPanel) searchPanel.style.display = '';
+        if (appMain) appMain.style.gridTemplateColumns = '';
+        const appTitle = document.getElementById('main-title');
+        if (appTitle) appTitle.textContent = currentMode === 'movie' ? 'Cinema Search' : 'Series Search';
+        discoverMovies();
+      }
+    });
+  }
+
   // Theme toggle button trigger
   themeToggleBtn.addEventListener('click', () => {
     currentTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -2094,14 +2206,20 @@ document.querySelectorAll('input[name="search-mode"]').forEach(radio => {
       
       currentSort = opt.dataset.sort;
       if (activeSearchResults.length > 0) {
-        const titleQuery = titleInput ? titleInput.value.trim() : '';
-        if (titleQuery) {
+        if (isWatchlistView) {
           sortActiveResults();
-          firstNewCardIndex = -1; // Re-sort is not a "load more"; no stagger animation
+          firstNewCardIndex = -1;
           renderMovies(activeSearchResults);
         } else {
-          currentPage = 1; // Reset to page 1 on sort change
-          discoverMovies();
+          const titleQuery = titleInput ? titleInput.value.trim() : '';
+          if (titleQuery) {
+            sortActiveResults();
+            firstNewCardIndex = -1; // Re-sort is not a "load more"; no stagger animation
+            renderMovies(activeSearchResults);
+          } else {
+            currentPage = 1; // Reset to page 1 on sort change
+            discoverMovies();
+          }
         }
       }
     });

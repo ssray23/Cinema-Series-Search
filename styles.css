@@ -1844,3 +1844,64 @@ body.light-theme.series-mode .logo-icon {
   background: linear-gradient(135deg, #0891b2, #2563eb, #4f46e5) !important;
   box-shadow: 0 6px 16px rgba(8, 145, 178, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3) !important;
 }
+
+/* --- Watchlist Feature --- */
+#watchlist-toggle-btn.active {
+  color: var(--red);
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.movie-poster-box {
+  position: relative;
+}
+
+.card-watchlist-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+}
+
+.card-watchlist-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.card-watchlist-btn i, .card-watchlist-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.card-watchlist-btn.hearted {
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.card-watchlist-btn.hearted i, .card-watchlist-btn.hearted svg {
+  fill: var(--red);
+}
+
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.heart-anim {
+  animation: heart-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}

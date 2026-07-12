@@ -326,7 +326,13 @@ let selectedActorId = null;
 let selectedActressId = null;
 let tmdbApiKey = localStorage.getItem('tmdb_api_key') || 'default_key';
 let currentTheme = localStorage.getItem('theme') || 'dark';
+
+### Watchlist State
+```javascript
+let watchlist = JSON.parse(localStorage.getItem('cineSearchWatchlist')) || [];
+let isWatchlistView = false;
 ```
+Watchlist items are persisted directly in the browser's `localStorage`. When `isWatchlistView` is enabled, the search panel is hidden, the main grid adapts to full width (`1fr`), and the results grid bypasses the TMDb API and re-renders entirely from the local `watchlist` array, seamlessly integrating with client-side sorting and mode filters.
 
 ### Filter State
 Filter UI values are read from DOM elements directly (no separate state object):
@@ -554,7 +560,7 @@ Used in the detail modal to collect watch-provider data for the user's region fi
 ## Future Enhancements
 
 1. **Advanced Filters UI** — Add checkboxes for rating range, runtime, certification (PG, R, etc.)
-2. **Saved Watchlist** — Store user's "Want to Watch" list in localStorage or a backend
+2. **User Accounts & Backend Sync** — Migrate local Watchlist to cloud-synced user profiles
 3. **Recommendations** — "Similar to this title" based on genre/cast
 4. **Streaming Availability Alerts** — Notify when a title becomes available on the user's preferred OTT platform
 5. **Multi-language Support** — Localize UI strings (currently English only)

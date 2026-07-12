@@ -34,8 +34,8 @@ CineSearch is a **hybrid SPA (Single Page Application)**. While the UI and searc
 
 ### 1. Initialization
 1. **App loads** → `DOMContentLoaded` fires, initializing all event listeners and UI state
-2. **API key check** → localStorage is queried for `tmdb_api_key`; if missing, an overlay prompts the user
-3. **Pre-discover** → If API key exists and this is a fresh load, the app calls `discoverMovies()` with default filters (cinema mode, any language, ranking sort)
+2. **API key & data check** → The app attempts to load API keys via the `/keys` endpoint and loads user data (watchlist, theme, custom OTTs) via `/userdata`.
+3. **Pre-discover** → The app calls `discoverMovies()` with default filters (cinema mode, any language, ranking sort)
 
 ### 2. User Interaction → Filter Change → API Call
 1. User types in **Title**, selects **Year**, **Language**, **Genre**, **Actor**, **Actress**, or toggles **OTT**
@@ -186,7 +186,7 @@ If TMDb's watch providers returns empty, the app queries the Watchmode API via a
 
 ### Fallback 2: Gemini AI (Google Search Grounding)
 If both TMDb and Watchmode return no flatrate options, `predictOttWithGemini(details)` is called — **only if `vote_count > 0`** (see Zero-Vote Guard below):
-- Uses **Gemini 2.5 Flash** with `googleSearch` grounding tool enabled, searching against a dynamically built, user-editable list of OTT platforms stored in `localStorage` (via the "AI OTT List" settings tab).
+- Uses **Gemini 2.5 Flash** with `googleSearch` grounding tool enabled, searching against a dynamically built, user-editable list of OTT platforms stored in `user_data.json` (via the "AI OTT List" settings tab).
 - Prompt requires the model to output a strictly structured **JSON response** with explicit `search_summary`, `year_match` (Yes/No), and `explicit_confirmation` (Yes/No) fields. This acts as a Chain-of-Thought (CoT) guardrail to prevent hallucination for obscure films.
 - If the model admits the year doesn't match or explicit OTT rights aren't confirmed, the client-side JSON parser forcibly rejects the prediction and returns `None`.
 - Response is also validated against `groundingMetadata.groundingChunks`: if Gemini returns a platform name but cited no real web sources, the answer is rejected.
@@ -306,12 +306,12 @@ let selectedActressId = null;
 let tmdbApiKey = localStorage.getItem('tmdb_api_key') || 'default_key';
 let currentTheme = localStorage.getItem('theme') || 'dark';
 
-### Watchlist State
+### Watchlist & Data Persistence (`user_data.json`)
 ```javascript
-let watchlist = JSON.parse(localStorage.getItem('cineSearchWatchlist')) || [];
-let isWatchlistView = false;
+let watchlist = []; // Loaded from /userdata
 ```
-Watchlist items are persisted directly in the browser's `localStorage`. When `isWatchlistView` is enabled, the search panel is hidden, the main grid adapts to full width (`1fr`), and the results grid bypasses the TMDb API and re-renders entirely from the local `watchlist` array, seamlessly integrating with client-side sorting and mode filters.
+
+Watchlist items, theme preferences, and custom OTT platforms are persisted securely to a local `user_data.json` file on the hard drive via the local Python proxy. When `isWatchlistView` is enabled, the search panel is hidden, the main grid adapts to full width (`1fr`), and the results grid bypasses the TMDb API and re-renders entirely from the local `watchlist` array, seamlessly integrating with client-side sorting and mode filters.
 
 ### Filter State
 Filter UI values are read from DOM elements directly (no separate state object):

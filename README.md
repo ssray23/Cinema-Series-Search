@@ -25,7 +25,7 @@ Every filter updates results **instantly** — no need to hit a search button. C
 - **Heart any title** — Click the heart icon on any movie or series poster to save it instantly to your personal Watchlist.
 - **Dedicated View** — Toggle the heart button in the top right to hide search filters and view your saved collection.
 - **Filter & Sort** — Your Watchlist seamlessly integrates with the Cinema/Series mode toggle and all sorting options (Ranking, Popularity, Release Date) completely offline.
-- **Persistent Storage** — Saved securely in your browser's local storage; your list survives tab closes and page refreshes.
+- **Persistent Storage** — Saved securely to a local `user_data.json` file on your hard drive. Your watchlist, custom OTT platforms, and theme preferences survive browser cache clears!
 
 ### 🎭 Media Detail Card
 Click any card to open a full-detail modal showing:
@@ -176,8 +176,8 @@ Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 
 
 ## 🔑 API Key & Privacy
 
-- Your TMDb API key is stored **only in your browser's `localStorage`** — it is never sent anywhere except directly to the TMDb API.
-- The app makes all requests client-side. No data is logged or stored on any server.
+- Your API keys are read from your local `.env` file. They are never sent anywhere except directly to the respective APIs.
+- The app makes all requests client-side (or through your local Python proxy). No data is logged or stored on any external server. User preferences (watchlist, themes, custom OTTs) are saved directly to `user_data.json` on your local machine.
 
 ---
 
@@ -190,4 +190,4 @@ Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 
 
 ---
 
-*Last updated: July 11, 2026*
+*Last updated: July 12, 2026*

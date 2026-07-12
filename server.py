@@ -62,6 +62,22 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
             return
         
+        if self.path == '/userdata':
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length > 0:
+                body = self.rfile.read(content_length)
+                data = json.loads(body)
+                
+                userdata_path = os.path.join(DIRECTORY, 'user_data.json')
+                with open(userdata_path, 'w') as f:
+                    json.dump(data, f, indent=2)
+                    
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+            return
+        
         self.send_response(404)
         self.end_headers()
 
@@ -96,6 +112,22 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(keys).encode('utf-8'))
             return
 
+        if self.path == '/userdata':
+            userdata_path = os.path.join(DIRECTORY, 'user_data.json')
+            data = {"watchlist": None, "ottPlatforms": None}
+            if os.path.exists(userdata_path):
+                try:
+                    with open(userdata_path, 'r') as f:
+                        data = json.load(f)
+                except Exception:
+                    pass
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return
+
         if self.path == '/shutdown':
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
@@ -119,7 +151,7 @@ class ShutdownServer(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         # Mute log for /ping and /unload to avoid console spam
-        if "GET /ping" in args[0] or "POST /unload" in args[0]:
+        if "GET /ping" in str(args[0]) or "POST /unload" in str(args[0]):
             return
         super().log_message(format, *args)
 

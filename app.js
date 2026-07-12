@@ -72,16 +72,16 @@ let firstNewCardIndex = -1; // Index where newly loaded cards start (-1 = fresh 
 let currentTheme = localStorage.getItem('theme') || 'dark';
 
 // --- Watchlist State ---
-let watchlist = JSON.parse(localStorage.getItem('cineSearchWatchlist')) || [];
+let watchlist = [];
 let isWatchlistView = false;
 
-// --- AI OTT Platform List (user-editable, persisted to localStorage) ---
+// --- AI OTT Platform List (user-editable, persisted) ---
 const DEFAULT_OTT_PLATFORMS = [
   'Netflix', 'YouTube', 'Amazon Prime Video', 'Disney+ Hotstar',
   'JioCinema', 'Zee5', 'Sony LIV', 'Hoichoi', 'Addatimes',
   'Sun NXT', 'Aha', 'Waves'
 ];
-let ottPlatforms = JSON.parse(localStorage.getItem('cineSearchOttPlatforms')) || [...DEFAULT_OTT_PLATFORMS];
+let ottPlatforms = [...DEFAULT_OTT_PLATFORMS];
 
 // --- DOM Elements ---
 const apiOverlay = document.getElementById('api-key-overlay');
@@ -843,7 +843,11 @@ function toggleWatchlist(movie, event) {
     }
   }
   
-  localStorage.setItem('cineSearchWatchlist', JSON.stringify(watchlist));
+  saveWatchlist();
+}
+
+function saveWatchlist() {
+  saveUserData();
 }
 
 /**
@@ -1535,31 +1539,7 @@ async function renderWatchProviders(details) {
 
     if (flatrateList.length === 0 && !isFutureRelease) {
       // Smart Fallback: If JustWatch dropped the ball, check networks/production companies for known OTTs
-      const knownOtts = [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video', alias: 'Amazon' },
-        { id: 9, name: 'Amazon Prime Video', alias: 'Prime Video' },
-        { id: 315, name: 'Hoichoi', alias: 'SVF' },
-        { id: 315, name: 'Hoichoi', alias: 'Eskay' },
-        { id: 315, name: 'Hoichoi', alias: 'Surinder' },
-        { id: 122, name: 'Disney+ Hotstar', alias: 'Hotstar' },
-        { id: 232, name: 'Zee5' },
-        { id: 237, name: 'Sony LIV' },
-        { id: 392, name: 'JioCinema' },
-        { id: 337, name: 'Disney+' },
-        { id: 15, name: 'Hulu' },
-        { id: 350, name: 'Apple TV+' },
-        { id: 350, name: 'Apple TV+', alias: 'Apple TV' },
-        { id: 384, name: 'Max', alias: 'HBO' },
-        { id: 386, name: 'Peacock' },
-        { id: 531, name: 'Paramount+' },
-        { id: 10001, name: 'Chorki' },
-        { id: 10002, name: 'Bioscope' },
-        { id: 10003, name: 'Klikk' },
-        { id: 10004, name: 'Addatimes' },
-        { id: 10005, name: 'Bongo' },
-        { id: 10005, name: 'Bongo', alias: 'Bongobd' }
-      ];
+      const knownOtts = ottPlatforms.map((name, idx) => ({ id: 9000 + idx, name: name }));
 
       const allEntities = [...(details.networks || [])];
       if (currentMode === 'tv' || !isRecentMovie) {
@@ -1572,12 +1552,11 @@ async function renderWatchProviders(details) {
 
         for (const ott of knownOtts) {
           const matchesName = matchesOttKeyword(entity.name, ott.name);
-          const matchesAlias = ott.alias && matchesOttKeyword(entity.name, ott.alias);
 
-          if (matchesName || matchesAlias) {
+          if (matchesName) {
             flatrateList.push({
               provider_id: ott.id,
-              provider_name: entity.name, // Display the exact network name (e.g. "Hoichoi (IN)")
+              provider_name: entity.name, // Display the exact network name
               logo_path: entity.logo_path || null,
               country: 'Global'
             });
@@ -1593,9 +1572,8 @@ async function renderWatchProviders(details) {
         const lowerHome = details.homepage.toLowerCase();
         for (const ott of knownOtts) {
           const domainName = ott.name.toLowerCase().replace(/\s+/g, '').replace('+', '');
-          const aliasDomain = ott.alias ? ott.alias.toLowerCase().replace(/\s+/g, '').replace('+', '') : null;
           
-          if (lowerHome.includes(domainName) || (aliasDomain && lowerHome.includes(aliasDomain))) {
+          if (lowerHome.includes(domainName)) {
             flatrateList.push({
               provider_id: ott.id,
               provider_name: ott.name,
@@ -1705,91 +1683,13 @@ async function renderWatchProviders(details) {
 
   // Render deferred "Check on..." suggestion pills (set earlier when no provider data was found)
   if (container.dataset.suggestionLang) {
-    const suggestionsByLang = {
-      'hi': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 392, name: 'JioCinema' },
-        { id: 122, name: 'Disney+ Hotstar' },
-        { id: 232, name: 'Zee5' },
-        { id: 237, name: 'Sony LIV' },
-        { id: 10006, name: 'Waves' }
-      ],
-      'bn': [
-        { id: 315, name: 'Hoichoi' },
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 232, name: 'Zee5' },
-        { id: 10004, name: 'Addatimes' }
-      ],
-      'ta': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 122, name: 'Disney+ Hotstar' },
-        { id: 232, name: 'Zee5' },
-        { id: 237, name: 'Sony LIV' }
-      ],
-      'te': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 122, name: 'Disney+ Hotstar' },
-        { id: 232, name: 'Zee5' }
-      ],
-      'ml': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 122, name: 'Disney+ Hotstar' },
-        { id: 232, name: 'Zee5' },
-        { id: 237, name: 'Sony LIV' }
-      ],
-      'kn': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 122, name: 'Disney+ Hotstar' },
-        { id: 232, name: 'Zee5' }
-      ],
-      'mr': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 232, name: 'Zee5' },
-        { id: 237, name: 'Sony LIV' }
-      ],
-      'pa': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 392, name: 'JioCinema' },
-        { id: 232, name: 'Zee5' }
-      ],
-      'gu': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 392, name: 'JioCinema' },
-        { id: 232, name: 'Zee5' }
-      ],
-      'en': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 337, name: 'Disney+' },
-        { id: 350, name: 'Apple TV+' },
-        { id: 384, name: 'Max' }
-      ],
-      'ko': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 337, name: 'Disney+' },
-        { id: 350, name: 'Apple TV+' }
-      ],
-      'ja': [
-        { id: 8, name: 'Netflix' },
-        { id: 9, name: 'Amazon Prime Video' },
-        { id: 283, name: 'Crunchyroll' },
-        { id: 337, name: 'Disney+' }
-      ]
-    };
-
-    const suggestLang = container.dataset.suggestionLang;
     const aiPredictionName = container.dataset.aiPrediction;
-    let suggestions = suggestionsByLang[suggestLang] || [];
+    
+    // Suggest the top 5 platforms from the user's custom OTT list
+    let suggestions = ottPlatforms.slice(0, 5).map((name, idx) => ({
+      id: 9000 + idx,
+      name: name
+    }));
     delete container.dataset.suggestionLang;
     delete container.dataset.aiPrediction;
 
@@ -1809,9 +1709,9 @@ async function renderWatchProviders(details) {
         // Create a mock provider object for the URL builder
         const aiProvider = { provider_id: 0, provider_name: aiPredictionName };
         
-        // Look up its ID if it exists in our list so the Google intent mapping works perfectly
-        const match = suggestions.find(s => s.name.toLowerCase() === aiPredictionName.toLowerCase());
-        if (match) aiProvider.provider_id = match.id;
+        // Look up its ID if it exists in our full list so the Google intent mapping works perfectly
+        const matchIdx = ottPlatforms.findIndex(name => name.toLowerCase() === aiPredictionName.toLowerCase());
+        if (matchIdx !== -1) aiProvider.provider_id = 9000 + matchIdx;
 
         const href = buildGoogleProviderSearchUrl(movieTitle, movieYear, langSuffix, aiProvider, 'watch');
 
@@ -1908,7 +1808,7 @@ async function renderWatchProviders(details) {
 // --- AI OTT Platform List UI ---
 
 function saveOttPlatforms() {
-  localStorage.setItem('cineSearchOttPlatforms', JSON.stringify(ottPlatforms));
+  saveUserData();
 }
 
 function renderOttList() {
@@ -2089,8 +1989,8 @@ function setupEventListeners() {
   // Theme toggle button trigger
   themeToggleBtn.addEventListener('click', () => {
     currentTheme = currentTheme === 'light' ? 'dark' : 'light';
-    localStorage.setItem('theme', currentTheme);
     applyTheme();
+    saveUserData();
   });
 
   // Shutdown App and Server
@@ -2487,6 +2387,66 @@ function applyTheme() {
 
 // --- Initialization ---
 
+async function saveUserData() {
+  try {
+    await fetch('/userdata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ watchlist, ottPlatforms, theme: currentTheme })
+    });
+  } catch (err) {
+    console.error("Failed to save user data", err);
+  }
+}
+
+async function loadUserData() {
+  try {
+    const res = await fetch('/userdata');
+    if (res.ok) {
+      const data = await res.json();
+      let needsSave = false;
+      
+      if (data.watchlist) {
+        watchlist = data.watchlist;
+      } else {
+        const localWatchlist = localStorage.getItem('cineSearchWatchlist');
+        if (localWatchlist) {
+          watchlist = JSON.parse(localWatchlist);
+          needsSave = true;
+        }
+      }
+
+      if (data.ottPlatforms) {
+        ottPlatforms = data.ottPlatforms;
+      } else {
+        const localOtts = localStorage.getItem('cineSearchOttPlatforms');
+        if (localOtts) {
+          ottPlatforms = JSON.parse(localOtts);
+          needsSave = true;
+        }
+      }
+
+      if (data.theme) {
+        currentTheme = data.theme;
+        applyTheme();
+      } else {
+        const localTheme = localStorage.getItem('theme');
+        if (localTheme) {
+          currentTheme = localTheme;
+          applyTheme();
+          needsSave = true;
+        }
+      }
+
+      if (needsSave) {
+        await saveUserData();
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load user data", err);
+  }
+}
+
 async function init() {
   applyTheme();
   setupEventListeners();
@@ -2513,6 +2473,8 @@ async function init() {
     tmdbApiKey = 'b90551ebe60ebd6e1c86724efd295ee0';
     watchmodeApiKey = 'LyV3pQaLPnoSIOx9zleDUKPtlukR7tzAKdpC1VHT';
   }
+
+  await loadUserData();
 
   // Pre-discover results on load
   discoverMovies();

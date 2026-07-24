@@ -69,15 +69,20 @@ ANTHROPIC_API_KEY=your_anthropic_key_here
 
 ### Step 3 — Launch the App
 
-#### Option A: Desktop App (macOS — recommended)
-Double-click the **Cinema Search** icon on your Desktop. The app starts the server and opens in your browser automatically.
+#### Option A: macOS Application (Recommended)
+Open **Cinema Search** directly from your macOS **Applications grid menu**, **Launchpad**, or **Spotlight** (`⌘ Cmd + Space`). 
 
-#### Option B: Manual launch
+The native Swift launcher automatically:
+1. Checks if the local backend server (`server.py`) is active on port `8080`.
+2. Launches `python3 server.py` in the background if needed.
+3. Opens [http://localhost:8080](http://localhost:8080) automatically in your default browser.
+
+#### Option B: Manual Terminal Launch
 ```bash
-cd "/Users/suddharay/Library/Mobile Documents/com~apple~CloudDocs/Mac Projects/Cinema Search"
 python3 server.py
 ```
 Then open [http://localhost:8080](http://localhost:8080) in your browser.
+
 
 ---
 

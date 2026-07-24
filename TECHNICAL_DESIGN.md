@@ -25,8 +25,13 @@ CineSearch is a **hybrid SPA (Single Page Application)**. While the UI and searc
 ┌────────┐     ┌────────┐     ┌────────┐
 │  TMDb  │     │Watchmode│    │ Gemini │
 │  API   │     │  API    │    │  API   │
-└────────┘     └────────┘     └────────┘
 ```
+
+### Native macOS Integration (`launcher.swift`)
+- **Bundle Identifier**: `com.ssray23.cinemasearch`
+- **Category**: `public.app-category.entertainment`
+- **Behavior**: Compiled binary checks if port `8080` is bound. If not, spawns `python3 server.py` asynchronously in the project root directory and opens `http://localhost:8080` in the user's default browser via `NSWorkspace`.
+- **App Icon**: High-resolution transparent multi-layer Apple ICNS bundle (`applet.icns`) with a 3D gradient movie clapperboard motif.
 
 ---
 

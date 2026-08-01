@@ -244,10 +244,11 @@ body {
   padding: 3px;
   gap: 2px;
   border: none;
+  position: relative;
 }
 
 .segmented-option {
-  flex: 1;
+  flex: 1 1 0px !important;
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -265,13 +266,16 @@ body {
   text-align: center;
   white-space: nowrap;
   line-height: 1.25;
+  position: relative;
+  z-index: 1;
 }
 
 .segmented-option.active {
   background: var(--segmented-active);
   color: var(--segmented-active-text);
   font-weight: 700;
-  box-shadow: var(--segmented-active-shadow);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  z-index: 2;
 }
 
 /* Genre Chips (No Outline) */

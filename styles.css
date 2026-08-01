@@ -45,7 +45,7 @@ body {
   --secondary: #E31837;
   --accent-glow: rgba(0, 0, 0, 0.08);
   --segmented-active: #E31837;
-  --segmented-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --segmented-active-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
   --border-accent: #E31837;
 }
 
@@ -56,7 +56,7 @@ body.series-mode {
   --secondary: #0072C6;
   --accent-glow: rgba(0, 0, 0, 0.08);
   --segmented-active: #0072C6;
-  --segmented-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --segmented-active-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
   --border-accent: #0072C6;
 }
 
@@ -287,6 +287,7 @@ body.light-theme .close-modal-btn:hover {
 }
 
 .segmented-option {
+  flex: 1 1 0px !important;
   padding: 4px 8px !important;
   font-size: 11px !important;
   line-height: 1.2 !important;
@@ -631,11 +632,11 @@ body.light-theme .input-clear-btn:hover {
 /* --- Header Section --- */
 .mac-header {
   height: auto !important;
-  min-height: 46px;
+  min-height: 48px !important;
   background: transparent !important;
   border-bottom: none !important;
   box-shadow: none !important;
-  padding: 16px 16px 8px 16px !important;
+  padding: 14px 16px 10px 16px !important;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
@@ -696,6 +697,8 @@ body.light-theme .header-control:hover {
 #main-title {
   color: var(--accent-primary);
   transition: color 0.3s ease;
+  line-height: 1 !important;
+  margin: 0 !important;
 }
 
 .app-header h1 {

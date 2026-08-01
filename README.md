@@ -23,6 +23,7 @@ Every filter updates results **instantly** — no need to hit a search button. C
 
 ### ❤️ Personal Watchlist
 - **Heart any title** — Click the heart icon on any movie or series poster to save it instantly to your personal Watchlist.
+- **Colour-coded icon** — The toolbar heart icon always renders in the mode accent colour: **red** in Cinema mode, **blue** in Series mode, matching the outlined style of all other toolbar icons.
 - **Dedicated View** — Toggle the heart button in the top right to hide search filters and view your saved collection.
 - **Filter & Sort** — Your Watchlist seamlessly integrates with the Cinema/Series mode toggle and all sorting options (Ranking, Popularity, Release Date) completely offline.
 - **Persistent Storage** — Saved securely to a local `user_data.json` file on your hard drive. Your watchlist, custom OTT platforms, and theme preferences survive browser cache clears!
@@ -195,4 +196,4 @@ Example: A Bengali OTT original with **2 votes and 9.0 average** scores as `9.0 
 
 ---
 
-*Last updated: July 12, 2026*
+*Last updated: August 1, 2026*

@@ -7,6 +7,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="universal-macos.css">
   <link rel="stylesheet" href="styles.css?v=1000">
 </head>
 <body>
@@ -16,23 +17,20 @@
 
   <!-- Settings Overlay (Tabbed) -->
   <div id="api-key-overlay" class="overlay hidden">
-    <div class="glass-card api-card">
+    <div class="mac-card api-card">
       <button id="close-settings-btn" class="close-modal-btn" title="Close Settings">
         <i data-lucide="x"></i>
       </button>
       <div class="api-header">
-        <div class="icon-wrapper">
-          <i data-lucide="settings" class="accent-color"></i>
-        </div>
         <h2>Settings</h2>
       </div>
 
       <!-- Tab Bar -->
-      <div class="settings-tabs">
-        <button class="settings-tab active" data-pane="pane-api-keys">
+      <div class="settings-tabs segmented-control">
+        <button class="settings-tab segmented-option active" data-pane="pane-api-keys">
           <i data-lucide="key-round"></i> API Keys
         </button>
-        <button class="settings-tab" data-pane="pane-ott">
+        <button class="settings-tab segmented-option" data-pane="pane-ott">
           <i data-lucide="sparkles"></i> AI OTT List
         </button>
       </div>
@@ -41,39 +39,26 @@
       <div class="settings-pane active" id="pane-api-keys">
         <form id="api-key-form">
           <div class="input-group">
-            <label for="api-key-input">TMDb API Key (v3)</label>
-            <div class="input-with-icon">
-              <i data-lucide="lock"></i>
-              <input type="password" id="api-key-input" placeholder="Required for all searches" autocomplete="off">
-            </div>
+            <label for="api-key-input" class="form-label">TMDb API key (v3)</label>
+            <input type="password" id="api-key-input" class="mac-input" placeholder="Required for all searches" autocomplete="off">
           </div>
-          <div class="input-group" style="margin-top: 1rem;">
-            <label for="watchmode-key-input">Watchmode API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional Fallback)</span></label>
-            <div class="input-with-icon">
-              <i data-lucide="lock"></i>
-              <input type="password" id="watchmode-key-input" placeholder="e.g. LyV3pQaLP... (Used when TMDb fails)" autocomplete="off">
-            </div>
+          <div class="input-group" style="margin-top: 0.6rem;">
+            <label for="watchmode-key-input" class="form-label">Watchmode API key <span style="font-weight: normal; color: var(--text-muted);">(Optional Fallback)</span></label>
+            <input type="password" id="watchmode-key-input" class="mac-input" placeholder="e.g. LyV3pQaLP... (Used when TMDb fails)" autocomplete="off">
           </div>
-          <div class="input-group" style="margin-top: 1rem;">
-            <label for="gemini-key-input">Gemini API Key <span style="font-weight: normal; color: var(--text-muted);">(Optional AI Prediction)</span></label>
-            <div class="input-with-icon">
-              <i data-lucide="lock"></i>
-              <input type="password" id="gemini-key-input" placeholder="e.g. AIzaSy... (Used as final fallback)" autocomplete="off">
-            </div>
+          <div class="input-group" style="margin-top: 0.6rem;">
+            <label for="gemini-key-input" class="form-label">Gemini API key <span style="font-weight: normal; color: var(--text-muted);">(Optional AI Prediction)</span></label>
+            <input type="password" id="gemini-key-input" class="mac-input" placeholder="e.g. AIzaSy... (Used as final fallback)" autocomplete="off">
           </div>
-          <div class="input-group" style="margin-top: 1rem;">
-            <label for="anthropic-key-input">Anthropic API Key <span style="font-weight: normal; color: var(--text-muted);">(AI Prediction fallback if Gemini rate-limits)</span></label>
-            <div class="input-with-icon">
-              <i data-lucide="lock"></i>
-              <input type="password" id="anthropic-key-input" placeholder="e.g. sk-ant-api03-..." autocomplete="off">
-            </div>
+          <div class="input-group" style="margin-top: 0.6rem;">
+            <label for="anthropic-key-input" class="form-label">Anthropic API key <span style="font-weight: normal; color: var(--text-muted);">(AI Prediction fallback if Gemini rate-limits)</span></label>
+            <input type="password" id="anthropic-key-input" class="mac-input" placeholder="e.g. sk-ant-api03-..." autocomplete="off">
           </div>
           <div class="api-help">
             <p>Don't have keys? <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">TMDb Key</a> | <a href="https://api.watchmode.com/" target="_blank" rel="noopener noreferrer">Watchmode Key</a> | <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Gemini Key</a> | <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic Key</a></p>
           </div>
-          <button type="submit" class="btn btn-primary btn-full">
+          <button type="submit" class="btn-primary btn-full" style="margin-top: 0.8rem; width: 100%;">
             <span>Save API Keys</span>
-            <i data-lucide="arrow-right"></i>
           </button>
         </form>
       </div>
@@ -90,60 +75,78 @@
 
 
   <!-- Main Application Wrapper -->
-  <div class="app-container">
-    <header class="app-header glass-card">
-      <div class="logo-section">
-        <div class="logo-icon">
-          <i data-lucide="film"></i>
-        </div>
-        <div>
-          <h1 id="main-title">Cinema Search</h1>
-          <p class="tagline">The smartest way to search, filter, and discover your next favorite title</p>
-        </div>
+  <div class="app-viewport">
+    <div class="mac-window">
+    <header class="mac-header">
+      <div class="window-title">
+        <h1 id="main-title" style="margin: 0; font-size: 24px; font-weight: 800;">Cinema Search</h1>
       </div>
       
       <!-- Mode Toggle Switch -->
-      <div class="mode-toggle-container">
-        <div class="mode-toggle">
-          <input type="radio" id="mode-movie" name="search-mode" value="movie" checked>
-          <label for="mode-movie"><i data-lucide="film"></i> Cinema</label>
-          <input type="radio" id="mode-tv" name="search-mode" value="tv">
-          <label for="mode-tv"><i data-lucide="tv"></i> Series</label>
-          <div class="mode-slider"></div>
-        </div>
+      <div class="segmented-control" id="mode-toggle">
+        <button class="segmented-option active" data-mode="movie">
+          <i data-lucide="film" style="width: 14px; height: 14px;"></i> Cinema
+        </button>
+        <button class="segmented-option" data-mode="tv">
+          <i data-lucide="tv" style="width: 14px; height: 14px;"></i> Series
+        </button>
       </div>
 
       <div class="header-actions">
-        <button id="watchlist-toggle-btn" class="btn header-control" title="My Watchlist">
-          <i data-lucide="heart" id="watchlist-icon"></i>
+        <button id="watchlist-toggle-btn" class="icon-btn" title="My Watchlist">
+          <i data-lucide="heart" id="watchlist-icon" style="width: 14px; height: 14px;"></i>
         </button>
-        <button id="theme-toggle-btn" class="btn header-control" title="Toggle Theme">
-          <i data-lucide="sun" id="theme-icon"></i>
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
+          <i data-lucide="sun" id="theme-icon" style="width: 14px; height: 14px;"></i>
         </button>
-        <button id="change-key-btn" class="btn header-control" title="Change API Key">
-          <i data-lucide="settings"></i>
+        <button id="change-key-btn" class="icon-btn" title="Change API Key">
+          <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
         </button>
-        <button id="shutdown-btn" class="btn header-control shutdown-control" title="Shutdown Server & Close App">
-          <i data-lucide="power"></i>
+        <button id="shutdown-btn" class="icon-btn shutdown-control" title="Shutdown Server & Close App">
+          <i data-lucide="power" style="width: 14px; height: 14px;"></i>
         </button>
       </div>
     </header>
 
-    <main class="app-main">
+    <!-- Results Toolbar -->
+    <div class="results-toolbar">
+      <div class="results-count">
+        <span id="results-count-text">Ready for discovery</span>
+      </div>
+      
+      <div class="sort-selector hidden" id="sort-toolbar">
+        <span class="sort-label">Sort by:</span>
+        <div class="sort-options">
+          <button class="sort-opt" data-sort="vote_average.desc">
+            <i data-lucide="star"></i>
+            <span>Ranking</span>
+          </button>
+          <button class="sort-opt active" data-sort="vote_count.desc">
+            <i data-lucide="trending-up"></i>
+            <span>Popularity</span>
+          </button>
+          <button class="sort-opt" data-sort="primary_release_date.desc">
+            <i data-lucide="calendar-days"></i>
+            <span>Release Date</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <main class="app-main mac-body">
       <!-- Search Dashboard Panel -->
-      <section class="search-panel glass-card">
-        <div class="panel-header">
-          <i data-lucide="sliders-horizontal" class="panel-icon"></i>
-          <h2>Search Criteria</h2>
+      <section class="search-panel mac-card search-form-container">
+        <div class="card-title">
+          <i data-lucide="sliders-horizontal" class="panel-icon" style="width: 14px; height: 14px;"></i>
+          Search Criteria
         </div>
         
-        <form id="search-form">
+        <form id="search-form" class="form-group">
           <!-- Title Input -->
           <div class="input-group">
-            <label for="title-input" id="title-label">Title / Keyword</label>
-            <div class="input-with-icon has-inline-clear">
-              <i data-lucide="search"></i>
-              <input type="text" id="title-input" placeholder="e.g. Inception, Breaking Bad, Ocean..." autocomplete="off">
+            <label for="title-input" id="title-label" class="form-label">Title / keyword</label>
+            <div class="input-with-icon has-inline-clear input-row">
+              <input type="text" id="title-input" class="mac-input" placeholder="e.g. Inception, Breaking Bad, Ocean..." autocomplete="off">
               <button type="button" id="title-clear-btn" class="input-clear-btn hidden" aria-label="Clear title">
                 <i data-lucide="x"></i>
               </button>
@@ -151,15 +154,14 @@
           </div>
 
           <!-- Person Fields: Actor & Actress -->
-          <div class="form-row flex-row" id="person-fields-row">
+          <div class="form-row flex-row" id="person-fields-row" style="display: flex; gap: 10px;">
             <!-- Actor Suggest Input -->
-            <div class="input-group search-person-group">
-              <label for="actor-input">Actor</label>
+            <div class="input-group search-person-group" style="flex: 1;">
+              <label for="actor-input" class="form-label">Actor</label>
               
               <!-- Input field (visible by default) -->
-              <div id="actor-input-wrapper" class="input-with-icon has-inline-clear">
-                <i data-lucide="user"></i>
-                <input type="text" id="actor-input" placeholder="e.g. Brad Pitt, Tom Hanks..." autocomplete="off">
+              <div id="actor-input-wrapper" class="input-with-icon has-inline-clear input-row">
+                <input type="text" id="actor-input" class="mac-input" placeholder="e.g. Brad Pitt, Tom Hanks..." autocomplete="off">
                 <button type="button" id="actor-clear-btn" class="input-clear-btn hidden" aria-label="Clear actor">
                   <i data-lucide="x"></i>
                 </button>
@@ -180,13 +182,12 @@
             </div>
 
             <!-- Actress Suggest Input -->
-            <div class="input-group search-person-group">
-              <label for="actress-input">Actress</label>
+            <div class="input-group search-person-group" style="flex: 1;">
+              <label for="actress-input" class="form-label">Actress</label>
               
               <!-- Input field (visible by default) -->
-              <div id="actress-input-wrapper" class="input-with-icon has-inline-clear">
-                <i data-lucide="user"></i>
-                <input type="text" id="actress-input" placeholder="e.g. Meryl Streep, Scarlett Johansson..." autocomplete="off">
+              <div id="actress-input-wrapper" class="input-with-icon has-inline-clear input-row">
+                <input type="text" id="actress-input" class="mac-input" placeholder="e.g. Meryl Streep, Scarlett Johansson..." autocomplete="off">
                 <button type="button" id="actress-clear-btn" class="input-clear-btn hidden" aria-label="Clear actress">
                   <i data-lucide="x"></i>
                 </button>
@@ -207,44 +208,43 @@
             </div>
           </div>
 
-          <!-- Metadata Fields: Year, Language & Genre -->
-          <div class="form-row flex-row">
-            <div class="input-group size-small">
-              <label for="year-input">Release Year</label>
-              <div class="input-with-icon">
-                <i data-lucide="calendar"></i>
-                <input type="number" id="year-input" min="1900" max="2030" placeholder="Any Year">
-              </div>
-            </div>
-
-            <div class="input-group size-large">
-              <label for="language-select">Language</label>
-              <div class="input-with-icon select-wrapper">
-                <i data-lucide="languages"></i>
-                <select id="language-select">
-                  <option value="">Any Language</option>
-                  <option value="en">English</option>
-                  <option value="es">Spanish (Español)</option>
-                  <option value="fr">French (Français)</option>
-                  <option value="ja">Japanese (日本語)</option>
-                  <option value="ko">Korean (한국어)</option>
-                  <option value="hi">Hindi (हिन्दी)</option>
-                  <option value="bn">Bengali (বাংলা)</option>
-                  <option value="zh">Chinese (中文)</option>
-                  <option value="de">German (Deutsch)</option>
-                  <option value="it">Italian (Italiano)</option>
-                  <option value="pt">Portuguese (Português)</option>
-                  <option value="ru">Russian (Русский)</option>
-                  <option value="sv">Swedish (Svenska)</option>
+          <!-- Dropdowns Row: Release Year, Language, Genre -->
+          <div class="form-row flex-row" style="display: flex; gap: 10px;">
+            <!-- Year Select -->
+            <div class="input-group" style="flex: 1;">
+              <label for="year-select" class="form-label">Release year</label>
+              <div class="select-wrapper input-row">
+                <select id="year-select" class="mac-input">
+                  <option value="">Any Year</option>
                 </select>
               </div>
             </div>
 
-            <div class="input-group size-large">
-              <label for="genre-select" id="genre-label">Genre</label>
-              <div class="input-with-icon select-wrapper">
-                <i data-lucide="clapperboard"></i>
-                <select id="genre-select">
+            <!-- Language Select -->
+            <div class="input-group" style="flex: 1;">
+              <label for="language-select" class="form-label">Language</label>
+              <div class="select-wrapper input-row">
+                <select id="language-select" class="mac-input">
+                  <option value="">Any Language</option>
+                  <option value="en">English</option>
+                  <option value="hi">Hindi</option>
+                  <option value="bn">Bengali</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="ja">Japanese</option>
+                  <option value="ko">Korean</option>
+                  <option value="it">Italian</option>
+                  <option value="zh">Chinese</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Genre Select -->
+            <div class="input-group" style="flex: 1;">
+              <label for="genre-select" class="form-label">Genre</label>
+              <div class="select-wrapper input-row">
+                <select id="genre-select" class="mac-input">
                   <option value="">Any Genre</option>
                   <option value="28">Action</option>
                   <option value="12">Adventure</option>
@@ -270,9 +270,9 @@
             </div>
           </div>
 
-          <div class="form-actions">
-            <button type="button" id="clear-btn" class="btn btn-primary">
-              <i data-lucide="rotate-ccw"></i>
+          <div class="form-actions" style="margin-top: 16px;">
+            <button type="button" id="clear-btn" class="btn-primary" style="width: auto; align-self: flex-start;">
+              <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
               <span>Reset Filters</span>
             </button>
           </div>
@@ -281,30 +281,6 @@
 
       <!-- Results Section -->
       <section class="results-panel">
-        <div class="results-toolbar">
-          <div class="results-count">
-            <span id="results-count-text">Ready for discovery</span>
-          </div>
-          
-          <div class="sort-selector glass-card hidden" id="sort-toolbar">
-            <span class="sort-label">Sort by:</span>
-            <div class="sort-options">
-              <button class="sort-opt" data-sort="vote_average.desc">
-                <i data-lucide="star"></i>
-                <span>Ranking</span>
-              </button>
-              <button class="sort-opt active" data-sort="vote_count.desc">
-                <i data-lucide="trending-up"></i>
-                <span>Popularity</span>
-              </button>
-              <button class="sort-opt" data-sort="primary_release_date.desc">
-                <i data-lucide="calendar-days"></i>
-                <span>Release Date</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- Shimmer Loader -->
         <div id="loader" class="loader-grid hidden">
           <div class="shimmer-card"></div>
@@ -334,6 +310,7 @@
         </div>
       </section>
     </main>
+    </div>
   </div>
 
   <!-- Detail Dialog Modal -->

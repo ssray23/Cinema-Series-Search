@@ -191,9 +191,10 @@ function debounce(func, wait) {
  * Toggle .has-value on each input wrapper to visually highlight filled fields.
  */
 function updateHasValue() {
+  const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
   const fields = [
     { el: titleInput },
-    { el: yearInput },
+    { el: activeYearEl },
     { el: languageSelect },
     { el: genreSelect },
   ];
@@ -869,7 +870,8 @@ async function discoverMovies() {
 
   
   const titleQuery = titleInput ? titleInput.value.trim() : '';
-  const year = yearInput.value ? parseInt(yearInput.value, 10) : null;
+  const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
+  const year = (activeYearEl && activeYearEl.value) ? parseInt(activeYearEl.value, 10) : null;
   const language = languageSelect.value || null;
   const genre = genreSelect ? genreSelect.value || null : null;
 
@@ -1202,7 +1204,7 @@ function renderMovies(movies) {
 
   movies.forEach((movie, index) => {
     const card = document.createElement('div');
-    card.className = 'movie-card glass-card';
+    card.className = 'movie-card mac-card';
     card.dataset.id = movie.id;
     
     // Mark cards that are newly loaded (load-more) for entrance animation
@@ -2006,7 +2008,8 @@ function setupEventListeners() {
     // Reset other fields
     titleInput.value = '';
     updateInlineClearButton(titleInput, titleClearBtn);
-    yearInput.value = '';
+    const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
+    if (activeYearEl) activeYearEl.value = '';
     languageSelect.value = '';
     if (genreSelect) genreSelect.value = '';
 
@@ -2056,8 +2059,9 @@ function setupEventListeners() {
   }
 
   // Automatic filtering when changing the release year
-  if (yearInput) {
-    yearInput.addEventListener('input', () => {
+  const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
+  if (activeYearEl) {
+    activeYearEl.addEventListener('change', () => {
       updateHasValue();
       currentPage = 1;
       discoverMovies();
@@ -2073,9 +2077,11 @@ function setupEventListeners() {
     });
   }
 
-document.querySelectorAll('input[name="search-mode"]').forEach(radio => {
-  radio.addEventListener('change', (e) => {
-    currentMode = e.target.value;
+document.querySelectorAll('#mode-toggle .segmented-option').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('#mode-toggle .segmented-option').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentMode = e.currentTarget.dataset.mode;
     
     // Update Theme and Icon
     document.body.classList.toggle('series-mode', currentMode === 'tv');
@@ -2126,7 +2132,8 @@ document.querySelectorAll('input[name="search-mode"]').forEach(radio => {
         ? "e.g. Inception, Breaking Bad, Ocean..." 
         : "e.g. Breaking Bad, The Office, Game of Thrones...";
     }
-    if (yearInput) yearInput.value = '';
+    const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
+    if (activeYearEl) activeYearEl.value = '';
     
     // Clear actors
     selectedActorId = null;
@@ -2323,9 +2330,11 @@ document.querySelectorAll('input[name="search-mode"]').forEach(radio => {
 function applyTheme() {
   if (currentTheme === 'light') {
     document.body.classList.add('light-theme');
+    document.documentElement.setAttribute('data-theme', 'light');
     themeIcon.setAttribute('data-lucide', 'moon');
   } else {
     document.body.classList.remove('light-theme');
+    document.documentElement.setAttribute('data-theme', 'dark');
     themeIcon.setAttribute('data-lucide', 'sun');
   }
   lucide.createIcons();

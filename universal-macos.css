@@ -1,0 +1,727 @@
+/* macOS System Settings Theme - Clean No-Outline Architecture */
+:root {
+  /* Classic Helvetica font stack */
+  --font-sans: "Helvetica", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+  
+  /* Accent Colors */
+  --accent-primary: #007aff;
+  --accent-primary-hover: #0062cc;
+  --accent-glow: rgba(0, 122, 255, 0.2);
+  --accent-success: #34c759;
+}
+
+/* Light Theme Variables (Default - Authentic macOS System Settings) */
+[data-theme="light"] {
+  --bg-gradient: #e2e2e7;
+  --window-bg: #f2f2f7;
+  --window-border: transparent;
+  --window-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  --header-bg: #e8e8ed;
+  --header-border: transparent;
+  --text-main: #1d1d1f;
+  --text-secondary: #3a3a3c;
+  --text-muted: #6e6e73;
+  --card-bg: #ffffff;
+  --card-border: transparent;
+  --input-bg: rgba(0, 0, 0, 0.04);
+  --input-border: transparent;
+  --segmented-bg: rgba(0, 0, 0, 0.05);
+  --segmented-active: #007aff;
+  --segmented-active-text: #ffffff;
+  --segmented-active-shadow: 0 2px 6px rgba(0, 122, 255, 0.25);
+  --code-bg: #1c1c1e;
+  --code-text: #f2f2f7;
+  --chip-bg: rgba(0, 0, 0, 0.05);
+  --chip-border: transparent;
+  --chip-hover: rgba(0, 0, 0, 0.09);
+}
+
+/* Dark Theme Variables (Clean No-Outline macOS Dark Mode) */
+[data-theme="dark"] {
+  --bg-gradient: #242426;
+  --window-bg: rgba(44, 44, 46, 0.92);
+  --window-border: transparent;
+  --window-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+  --header-bg: rgba(54, 54, 56, 0.85);
+  --header-border: transparent;
+  --text-main: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-muted: #86868b;
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --card-border: transparent;
+  --input-bg: rgba(255, 255, 255, 0.12);
+  --input-border: transparent;
+  --segmented-bg: rgba(0, 0, 0, 0.25);
+  --segmented-active: #007aff;
+  --segmented-active-text: #ffffff;
+  --segmented-active-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
+  --code-bg: #1c1c1e;
+  --code-text: #f5f5f7;
+  --chip-bg: rgba(255, 255, 255, 0.12);
+  --chip-border: transparent;
+  --chip-hover: rgba(255, 255, 255, 0.18);
+}
+
+/* Global Reset & Base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  outline: none !important;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.35;
+  background: var(--bg-gradient);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 16px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Application Layout Container */
+.app-viewport {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* macOS Window Frame (No Outer Outline) */
+.mac-window {
+  width: 100%;
+  background: var(--window-bg);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border-radius: var(--radius-xl);
+  border: none;
+  box-shadow: var(--window-shadow);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Window Header Bar (No Outline) */
+.mac-header {
+  height: 46px;
+  background: var(--header-bg);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  user-select: none;
+}
+
+.window-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: var(--chip-bg);
+  border: none;
+  color: var(--text-main);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: var(--chip-hover);
+}
+
+/* Window Body Content */
+.mac-body {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+@media (min-width: 840px) {
+  .mac-body-grid {
+    display: grid;
+    grid-template-columns: 1.45fr 1fr;
+    gap: 20px;
+  }
+}
+
+/* Section Cards (No Outlines) */
+.search-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mac-card {
+  background: var(--card-bg);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.card-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+
+/* Form Groups */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-label {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.25;
+}
+
+.sublabel {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+/* macOS Segmented Control (No Outline) */
+.segmented-control {
+  display: flex;
+  background: var(--segmented-bg);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+  border: none;
+}
+
+.segmented-option {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.segmented-option.active {
+  background: var(--segmented-active);
+  color: var(--segmented-active-text);
+  font-weight: 700;
+  box-shadow: var(--segmented-active-shadow);
+}
+
+/* Genre Chips (No Outline) */
+.chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.genre-chip {
+  background: var(--chip-bg);
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.25;
+}
+
+.genre-chip:hover {
+  background: var(--chip-hover);
+  color: var(--text-main);
+}
+
+.genre-chip.active {
+  background: var(--accent-primary);
+  border: none;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.genre-chip.excluded {
+  background: rgba(239, 68, 68, 0.15);
+  border: none;
+  color: #f87171;
+  text-decoration: line-through;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Form Inputs & Selects (No Outline) */
+.input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.mac-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7.5px 12px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--text-main);
+  outline: none;
+  transition: all 0.2s ease;
+  line-height: 1.25;
+}
+
+.mac-input:focus {
+  background: var(--card-bg);
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
+
+.preset-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.preset-btn {
+  background: var(--chip-bg);
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.preset-btn:hover {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+/* Custom Checkbox (macOS System Settings Style, No Outline) */
+.mac-checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-main);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--chip-bg);
+  border: none;
+  transition: all 0.2s ease;
+  line-height: 1.25;
+}
+
+.mac-checkbox-container:hover {
+  background: var(--chip-hover);
+}
+
+.mac-checkbox-box {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1.5px solid rgba(0, 0, 0, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .mac-checkbox-box {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+}
+
+.mac-checkbox-box.checked {
+  background: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 2px 6px var(--accent-glow);
+}
+
+/* URL Preview Section (No Outlines) */
+.url-output-card {
+  background: var(--card-bg);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.url-code-wrapper {
+  position: relative;
+  background: var(--code-bg);
+  border-radius: var(--radius-md);
+  border: none;
+  padding: 10px 12px;
+  word-break: break-all;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--code-text);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.url-highlight-host { color: #60a5fa; font-weight: 600; }
+.url-highlight-param { color: #f472b6; }
+.url-highlight-val { color: #34d399; }
+.url-highlight-neg { color: #f87171; font-weight: bold; }
+
+/* Action Buttons (No Outline) */
+.btn-primary {
+  background: var(--accent-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 10px var(--accent-glow);
+  line-height: 1.25;
+}
+
+.btn-primary:hover {
+  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.btn-secondary {
+  background: var(--chip-bg);
+  color: var(--text-main);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.25;
+}
+
+.btn-secondary:hover {
+  background: var(--chip-hover);
+}
+
+/* History / Presets Sidebar (No Outlines) */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--chip-bg);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.history-item:hover {
+  background: var(--chip-hover);
+}
+
+.history-name {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.25;
+  text-align: left;
+}
+
+.history-sub {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.2;
+  text-align: left;
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mac-toast {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  border: none;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1.25;
+}
+
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+/* =====================================================================
+   UTILITIES & DECORATORS (Extracted & Adapted from App.css)
+   ===================================================================== */
+
+/* Reusable Counter / Badge */
+.mac-counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--accent-primary);
+  background: var(--chip-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
+  display: inline-block;
+  font-family: var(--font-mono);
+}
+
+.mac-counter:hover {
+  border-color: var(--accent-primary);
+}
+
+.mac-counter:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Centered Layout Wrapper */
+.layout-center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+  flex-grow: 1;
+}
+
+@media (max-width: 1024px) {
+  .layout-center {
+    padding: 32px 20px 24px;
+    gap: 18px;
+  }
+}
+
+/* Feature Grid (Responsive row of boxes) */
+.feature-grid {
+  display: flex;
+  border-top: 1px solid var(--chip-bg);
+  text-align: left;
+  width: 100%;
+}
+
+.feature-grid > div {
+  flex: 1 1 0;
+  padding: 32px;
+}
+
+/* Add a border between columns if needed */
+.feature-grid > div:not(:last-child) {
+  border-right: 1px solid var(--chip-bg);
+}
+
+@media (max-width: 1024px) {
+  .feature-grid {
+    flex-direction: column;
+    text-align: center;
+  }
+  .feature-grid > div {
+    padding: 24px 20px;
+  }
+  .feature-grid > div:not(:last-child) {
+    border-right: none;
+    border-bottom: 1px solid var(--chip-bg);
+  }
+}
+
+/* Feature Icon */
+.feature-icon {
+  margin-bottom: 16px;
+  width: 22px;
+  height: 22px;
+  color: var(--text-main);
+}
+
+/* Link List / Social Buttons Row */
+.mac-link-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  margin: 32px 0 0;
+  flex-wrap: wrap;
+}
+
+.mac-link-btn {
+  color: var(--text-main);
+  font-size: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--chip-bg);
+  display: flex;
+  padding: 6px 12px;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-family: var(--font-sans);
+}
+
+.mac-link-btn:hover {
+  background: var(--chip-hover);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Reusable Spacer/Divider */
+.mac-spacer {
+  height: 88px;
+  width: 100%;
+  border-top: 1px solid var(--chip-bg);
+}
+
+@media (max-width: 1024px) {
+  .mac-spacer {
+    height: 48px;
+  }
+}
+
+/* Decorative Edge Ticks */
+.mac-ticks {
+  position: relative;
+  width: 100%;
+}
+
+.mac-ticks::before,
+.mac-ticks::after {
+  content: '';
+  position: absolute;
+  top: -4.5px;
+  border: 5px solid transparent;
+}
+
+.mac-ticks::before {
+  left: 0;
+  border-left-color: var(--text-muted);
+}
+
+.mac-ticks::after {
+  right: 0;
+  border-right-color: var(--text-muted);
+}

@@ -50,6 +50,10 @@
       {
         "file": "tests/bugs/test_heart_accent_colour.test.js",
         "description": "Heart icon .hearted class uses var(--accent-primary) — red in Cinema, blue in Series — not hardcoded red values"
+      },
+      {
+        "file": "tests/bugs/test_ott_pill_size_matches_google_btn.test.js",
+        "description": "OTT provider pill padding, font-size, font-weight, gap, border-radius, and icon size match the Search with Google button"
       }
     ]
   }

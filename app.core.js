@@ -302,6 +302,17 @@
     }
   }
 
+  /**
+   * Generate array of year numbers from maxYear down to startYear.
+   */
+  function generateYearOptions(startYear = 1900, maxYear = new Date().getFullYear()) {
+    const years = [];
+    for (let y = maxYear; y >= startYear; y--) {
+      years.push(y);
+    }
+    return years;
+  }
+
   return {
     isLikelyTvSeriesOrSpecial,
     getLanguageSuffix,
@@ -312,6 +323,8 @@
     weightedRating,
     compareBySort,
     buildGoogleProviderSearchUrl,
-    parseAiJsonCotResponse
+    parseAiJsonCotResponse,
+    generateYearOptions
   };
 }));
+

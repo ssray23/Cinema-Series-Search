@@ -55,3 +55,11 @@ test('parseAiJsonCotResponse: Strict JSON CoT parsing & validation', () => {
   const markdownWrapped = "```json\n" + validJson + "\n```";
   assert.equal(core.parseAiJsonCotResponse(markdownWrapped, ['Netflix']), 'Netflix');
 });
+
+test('generateYearOptions: Generates descending list of years', () => {
+  const years = core.generateYearOptions(1990, 2026);
+  assert.equal(years.length, 37);
+  assert.equal(years[0], 2026);
+  assert.equal(years[years.length - 1], 1990);
+});
+

@@ -188,6 +188,28 @@ function debounce(func, wait) {
 }
 
 /**
+ * Populate Release Year dropdown options dynamically from current year down to 1900.
+ */
+function populateYearSelect() {
+  const targetYearSelect = document.getElementById('year-select');
+  if (!targetYearSelect) return;
+
+  const currentVal = targetYearSelect.value;
+  const currentYear = new Date().getFullYear();
+  const startYear = 1900;
+
+  let html = '<option value="">Any Year</option>';
+  for (let y = currentYear; y >= startYear; y--) {
+    html += `<option value="${y}">${y}</option>`;
+  }
+  targetYearSelect.innerHTML = html;
+
+  if (currentVal) {
+    targetYearSelect.value = currentVal;
+  }
+}
+
+/**
  * Toggle .has-value on each input wrapper to visually highlight filled fields.
  */
 function updateHasValue() {
@@ -200,7 +222,7 @@ function updateHasValue() {
   ];
   fields.forEach(({ el }) => {
     if (!el) return;
-    const wrapper = el.closest('.input-with-icon');
+    const wrapper = el.closest('.input-with-icon') || el.closest('.select-wrapper');
     if (!wrapper) return;
     wrapper.classList.toggle('has-value', el.value.trim() !== '');
   });
@@ -999,6 +1021,15 @@ async function discoverMovies() {
         pageResults = pageResults.filter(movie => movie.original_language === language);
       }
       
+      // Apply client-side year filtering for search mode
+      if (isSearchMode && year) {
+        pageResults = pageResults.filter(movie => {
+          const relDate = movie.release_date || movie.first_air_date || '';
+          const relYear = relDate ? parseInt(relDate.split('-')[0], 10) : null;
+          return relYear === year;
+        });
+      }
+
       // Apply client-side genre filtering for search/movie
       if (isSearchMode && genre) {
         const genreIds = genre.split('|');
@@ -2404,6 +2435,7 @@ async function loadUserData() {
 
 async function init() {
   applyTheme();
+  populateYearSelect();
   setupEventListeners();
 
   try {

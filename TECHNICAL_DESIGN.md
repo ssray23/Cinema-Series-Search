@@ -619,16 +619,21 @@ Additionally, discover/movie API calls always send:
 
 ---
 
-## Year Spinner UX
+## Release Year Dropdown UX
 
-The Release Year `<input type="number">` keeps `min="1900"` (to allow navigating to any past year), but a JS `mousedown` + `keydown` listener pre-fills the field with the current year the moment the spinner is interacted with on an empty field. This means the spinner starts at the current year by default while preserving full backward navigation.
+The Release Year `<select id="year-select">` is dynamically populated on application initialization (`populateYearSelect()`) with options descending from the current year down to `1900`. Release year selections drive both TMDb server-side discover queries (`primary_release_year` / `first_air_date_year`) and client-side post-filtering during title search mode.
 
 ```javascript
-const _prefillYear = () => { if (!yearInput.value) yearInput.value = new Date().getFullYear(); };
-yearInput.addEventListener('mousedown', _prefillYear);
-yearInput.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') _prefillYear();
-});
+function populateYearSelect() {
+  const targetYearSelect = document.getElementById('year-select');
+  if (!targetYearSelect) return;
+  const currentYear = new Date().getFullYear();
+  let html = '<option value="">Any Year</option>';
+  for (let y = currentYear; y >= 1900; y--) {
+    html += `<option value="${y}">${y}</option>`;
+  }
+  targetYearSelect.innerHTML = html;
+}
 ```
 
 ---

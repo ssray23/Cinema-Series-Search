@@ -31,6 +31,7 @@ The design system enforces 100% color harmony based on the active media mode:
 
 | Element | Font Size | Weight | Case / Style | Notes |
 | :--- | :--- | :--- | :--- | :--- |
+| **Detail Modal Title** | `20px` | 800 | Sentence Case | Prominent visual hierarchy in detail window header |
 | **Window Title** | `24px` | 800 | Sentence Case | Left-aligned in `.mac-header` |
 | **Modal / Section Headers** | `13px` | 700 | Sentence Case | Left-aligned, no excessive bottom margin |
 | **Form Labels & General UI** | `12px` | 600 / 700 | Sentence Case | Unified across inputs, select dropdowns, and cards |
@@ -40,6 +41,14 @@ The design system enforces 100% color harmony based on the active media mode:
 ---
 
 ## 4. Component Architecture
+
+### Pop-Up Button Dropdowns (Select Controls)
+- **Native Stepper Badge**: All dropdown `<select>` controls feature a right-aligned rounded stepper badge container (`15px × 15px`, `border-radius: 3.5px`).
+- **Dual Vertical Steppers (`^ v`)**: Contains vector-masked dual vertical chevrons (`6px × 8px`) centered vertically at `top: 50%; transform: translateY(-50%)`.
+- **Hover Responsiveness**: Smooth background transition on hover (`--stepper-hover-bg`).
+
+### OTT Provider Pill Badges
+- **Symmetric Icon Insets**: `padding: 4px 10px 4px 4px` ensures top, bottom, and left offset distances from the pill border to the provider logo image are 100% equal (`4px`).
 
 ### Segmented Controls (Switchers)
 - **Shared Proportions**: Standardized padding (`4px 8px`) and height across all switchers (Cinema/Series main switcher, Sort By selector, Settings API/OTT tabs).

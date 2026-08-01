@@ -304,14 +304,14 @@ async function predictOttWithGemini(details) {
   const overview = details.overview || '';
   
   const releaseDate = details.release_date || details.first_air_date || '';
-  const prompt = `You are a strict fact-checker for OTT streaming availability. Search the web to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming or will stream.
+  const prompt = `You are a strict fact-checker for OTT streaming availability. Search the web to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming.
 Overview: ${overview}
 
 CRITICAL RULES — follow strictly:
 1. Pay close attention to the release year (${releaseDate || year}). Do NOT confuse this movie with originals, remakes, or prequels of the same name.
-2. If the movie is currently in theatres or recently released, but its post-theatrical OTT streaming rights have been officially acquired by a platform (e.g., Netflix), return that platform.
-3. Only return a platform name if search results EXPLICITLY CONFIRM it is streaming there right now or has confirmed OTT rights.
-4. If search results are unclear, contradictory, or show no confirmed OTT release or rights — return "None".
+2. If the movie is currently in theatres or was released recently (within the last 90 days), return "None" UNLESS search results explicitly prove it is ALREADY actively streaming on flatrate OTT today. Future post-theatrical rights acquisitions for upcoming streaming do NOT count as currently streaming.
+3. Only return a platform name if search results EXPLICITLY CONFIRM it is streaming there right now.
+4. If search results are unclear, contradictory, or show no active streaming release — return "None".
 5. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
 6. Only choose from: ${ottPlatforms.join(', ')}.
 
@@ -319,7 +319,7 @@ You MUST reply in exactly this JSON format:
 {
   "search_summary": "Brief summary of what search results say about this title.",
   "year_match": "Yes or No",
-  "explicit_confirmation": "Yes or No - is there definitive proof of rights/streaming?",
+  "explicit_confirmation": "Yes or No - is there definitive proof of active streaming today?",
   "prediction": "The exact platform name from the list, 'Unreleased', or 'None'"
 }`;
 
@@ -400,14 +400,14 @@ async function predictOttWithClaude(details) {
   const overview = details.overview || '';
   const releaseDate = details.release_date || details.first_air_date || '';
 
-  const prompt = `You are a strict fact-checker for OTT streaming availability. Use the web_search tool to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming or will stream.
+  const prompt = `You are a strict fact-checker for OTT streaming availability. Use the web_search tool to find out where "${title}" (${releaseDate || year}, language: ${lang}) is currently streaming.
 Overview: ${overview}
 
 CRITICAL RULES — follow strictly:
 1. Pay close attention to the release year (${releaseDate || year}). Do NOT confuse this movie with originals, remakes, or prequels of the same name.
-2. If the movie is currently in theatres or recently released, but its post-theatrical OTT streaming rights have been officially acquired by a platform (e.g., Netflix), return that platform.
-3. Only return a platform name if results EXPLICITLY CONFIRM it is streaming there right now or has confirmed OTT rights.
-4. If search results are unclear, contradictory, or show no confirmed OTT release or rights — return "None".
+2. If the movie is currently in theatres or was released recently (within the last 90 days), return "None" UNLESS search results explicitly prove it is ALREADY actively streaming on flatrate OTT today. Future post-theatrical rights acquisitions for upcoming streaming do NOT count as currently streaming.
+3. Only return a platform name if results EXPLICITLY CONFIRM it is streaming there right now.
+4. If search results are unclear, contradictory, or show no active streaming release — return "None".
 5. Do NOT guess based on genre, language, or studio patterns. Truthfulness is the only priority.
 6. Only choose from: ${ottPlatforms.join(', ')}.
 
@@ -415,7 +415,7 @@ You MUST reply in exactly this JSON format:
 {
   "search_summary": "Brief summary of what search results say about this title.",
   "year_match": "Yes or No",
-  "explicit_confirmation": "Yes or No - is there definitive proof of rights/streaming?",
+  "explicit_confirmation": "Yes or No - is there definitive proof of active streaming today?",
   "prediction": "The exact platform name from the list, 'Unreleased', or 'None'"
 }`;
 
@@ -1527,53 +1527,52 @@ async function renderWatchProviders(details) {
     const releaseStr = details.release_date || details.first_air_date;
     const isFutureRelease = releaseStr && releaseStr > todayStr;
 
-    let isRecentMovie = false;
-    if (currentMode === 'movie' && releaseStr && !isFutureRelease) {
-      const releaseDate = new Date(releaseStr);
-      const today = new Date();
-      const diffDays = (today - releaseDate) / (1000 * 60 * 60 * 24);
-      if (diffDays >= 0 && diffDays < 60) {
-        isRecentMovie = true;
-      }
-    }
-
     if (flatrateList.length === 0 && !isFutureRelease) {
-      // Smart Fallback: If JustWatch dropped the ball, check networks/production companies for known OTTs
+      // Dynamic Fallback: Check TV broadcasting networks & official streaming homepage URLs.
+      // We do NOT use arbitrary hardcoded day thresholds (like 90 days) or treat movie production
+      // studio names as streaming proof. Instead, live API data, TV networks, official viewing URLs,
+      // and AI live web searches provide accurate, real-time streaming verification for day-1, day-14, 
+      // or day-45 OTT releases dynamically.
       const knownOtts = ottPlatforms.map((name, idx) => ({ id: 9000 + idx, name: name }));
-
-      const allEntities = [...(details.networks || [])];
-      if (currentMode === 'tv' || !isRecentMovie) {
-        allEntities.push(...(details.production_companies || []));
-      }
       let fallbackFound = false;
-      
-      for (const entity of allEntities) {
-        if (!entity.name) continue;
 
-        for (const ott of knownOtts) {
-          const matchesName = matchesOttKeyword(entity.name, ott.name);
-
-          if (matchesName) {
-            flatrateList.push({
-              provider_id: ott.id,
-              provider_name: entity.name, // Display the exact network name
-              logo_path: entity.logo_path || null,
-              country: 'Global'
-            });
-            seenFlatrate.add(`${ott.id}-${entity.name}`);
-            fallbackFound = true;
-            break;
+      // 1. For TV mode, check broadcasting networks (e.g. HBO, Netflix, Apple TV+)
+      if (currentMode === 'tv' && details.networks && details.networks.length > 0) {
+        for (const network of details.networks) {
+          if (!network.name) continue;
+          for (const ott of knownOtts) {
+            if (matchesOttKeyword(network.name, ott.name)) {
+              flatrateList.push({
+                provider_id: ott.id,
+                provider_name: network.name,
+                logo_path: network.logo_path || null,
+                country: 'Global'
+              });
+              seenFlatrate.add(`${ott.id}-${network.name}`);
+              fallbackFound = true;
+              break;
+            }
           }
+          if (fallbackFound) break;
         }
-        if (fallbackFound) break;
       }
 
+      // 2. Check official movie/show homepage URL for direct streaming links
       if (!fallbackFound && details.homepage) {
         const lowerHome = details.homepage.toLowerCase();
+        const ottAliases = {
+          'amazon prime video': ['primevideo', 'amazon'],
+          'disney+ hotstar': ['hotstar', 'disneyplus'],
+          'apple tv+': ['tv.apple', 'apple.com'],
+          'hbo max': ['max.com', 'hbomax']
+        };
+
         for (const ott of knownOtts) {
-          const domainName = ott.name.toLowerCase().replace(/\s+/g, '').replace('+', '');
+          const lowerOtt = ott.name.toLowerCase();
+          const domainName = lowerOtt.replace(/\s+/g, '').replace('+', '');
+          const aliases = ottAliases[lowerOtt] || [];
           
-          if (lowerHome.includes(domainName)) {
+          if (lowerHome.includes(domainName) || aliases.some(alias => lowerHome.includes(alias))) {
             flatrateList.push({
               provider_id: ott.id,
               provider_name: ott.name,
@@ -1612,7 +1611,7 @@ async function renderWatchProviders(details) {
                 flatrateList.push({
                   provider_id: source.source_id,
                   provider_name: source.name,
-                  logo_path: null, // Watchmode logo handling is more complex, fallback to name/default icon
+                  logo_path: null,
                   country: source.region || 'Global'
                 });
               }
@@ -1620,10 +1619,8 @@ async function renderWatchProviders(details) {
           }
         }
 
-        // If STILL empty after Watchmode (or if Watchmode wasn't queried)
+        // If STILL empty after Watchmode
         if (flatrateList.length === 0) {
-          // Removed the zero-vote guard as it was too restrictive for new regional titles
-          // Try Gemini AI first, fall back to Anthropic Claude if Gemini rate-limits
           let aiPrediction = null;
           if (geminiApiKey) {
             container.innerHTML = '<div class="spinner" style="display:inline-block; margin-right:0.5rem; width:14px; height:14px;"></div><span class="text-muted">Asking AI...</span>';
@@ -1639,23 +1636,9 @@ async function renderWatchProviders(details) {
             aiPrediction = await predictOttWithClaude(details);
           }
 
-          const hasEmptyProviderData = !results || Object.keys(results).length === 0;
-          const lang = details.original_language;
-          const ottHeavyLangs = ['hi', 'bn', 'ta', 'te', 'ml', 'kn', 'mr', 'pa', 'gu', 'en', 'ko', 'ja'];
-          const hasSuggestions = hasEmptyProviderData && lang && ottHeavyLangs.includes(lang);
-
-          if (aiPrediction || hasSuggestions) {
-            container.innerHTML = '<span class="text-muted" style="display:block;margin-bottom:0.5rem;">Streaming data unavailable — check these platforms:</span>';
-            
-            if (aiPrediction) {
-              container.dataset.aiPrediction = aiPrediction;
-            }
-            if (hasSuggestions) {
-              container.dataset.suggestionLang = lang;
-            } else {
-              // Mock language to trigger render loop for AI pill even if not in heavy lang list
-              container.dataset.suggestionLang = 'en';
-            }
+          if (aiPrediction && aiPrediction !== 'None') {
+            container.innerHTML = '';
+            container.dataset.aiPrediction = aiPrediction;
           } else {
             container.innerHTML = '<span class="text-muted">Not streaming on flatrate OTT platforms.</span>';
           }
@@ -1663,15 +1646,11 @@ async function renderWatchProviders(details) {
       }
     }
 
-  // All OTT pills intentionally use Google for reliable title-to-page matching.
   function buildGoogleProviderSearchUrl(title, year, langSuffix, provider, intent) {
     const cleanTitle = (title || '').trim();
     const cleanYear = (year || '').trim();
     const cleanLang = (langSuffix || '').trim();
     
-    // We rely on Google's semantic search rather than `site:` restrictions. 
-    // `site:` forces strict text matching which either returns the wrong movie (if year is omitted) 
-    // or "nothing found" (if the OTT page doesn't index the year).
     const query = `${cleanTitle} ${cleanYear} ${cleanLang} ${provider.provider_name} ${intent}`.replace(/\s+/g, ' ').trim();
     return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
@@ -1681,79 +1660,46 @@ async function renderWatchProviders(details) {
   const movieYear = mDate ? mDate.split('-')[0] : '';
   const langSuffix = getLanguageSuffix(details.original_language);
 
-  // Render deferred "Check on..." suggestion pills (set earlier when no provider data was found)
-  if (container.dataset.suggestionLang) {
+  // Render verified AI prediction pill if available
+  if (container.dataset.aiPrediction) {
     const aiPredictionName = container.dataset.aiPrediction;
-    
-    // Suggest the top 5 platforms from the user's custom OTT list
-    let suggestions = ottPlatforms.slice(0, 5).map((name, idx) => ({
-      id: 9000 + idx,
-      name: name
-    }));
-    delete container.dataset.suggestionLang;
     delete container.dataset.aiPrediction;
 
-    // Render AI predicted pill first
-    if (aiPredictionName) {
-      if (aiPredictionName === 'RATE_LIMIT_EXCEEDED') {
-        const pill = document.createElement('div');
-        pill.className = 'provider-pill provider-pill--ai-suggested';
-        pill.style.opacity = '0.6';
-        pill.style.cursor = 'not-allowed';
-        pill.innerHTML = `
-          <i data-lucide="info" class="small-icon"></i>
-          <span>AI Prediction not available</span>
-        `;
-        container.appendChild(pill);
-      } else {
-        // Create a mock provider object for the URL builder
-        const aiProvider = { provider_id: 0, provider_name: aiPredictionName };
-        
-        // Look up its ID if it exists in our full list so the Google intent mapping works perfectly
-        const matchIdx = ottPlatforms.findIndex(name => name.toLowerCase() === aiPredictionName.toLowerCase());
-        if (matchIdx !== -1) aiProvider.provider_id = 9000 + matchIdx;
+    if (aiPredictionName === 'RATE_LIMIT_EXCEEDED') {
+      const pill = document.createElement('div');
+      pill.className = 'provider-pill provider-pill--ai-suggested';
+      pill.style.opacity = '0.6';
+      pill.style.cursor = 'not-allowed';
+      pill.innerHTML = `
+        <i data-lucide="info" class="small-icon"></i>
+        <span>AI Prediction not available</span>
+      `;
+      container.appendChild(pill);
+    } else {
+      const aiProvider = { provider_id: 0, provider_name: aiPredictionName };
+      const matchIdx = ottPlatforms.findIndex(name => name.toLowerCase() === aiPredictionName.toLowerCase());
+      if (matchIdx !== -1) aiProvider.provider_id = 9000 + matchIdx;
 
-        const href = buildGoogleProviderSearchUrl(movieTitle, movieYear, langSuffix, aiProvider, 'watch');
-
-        const pill = document.createElement('a');
-        pill.className = 'provider-pill provider-pill--ai-suggested';
-        pill.href = href;
-        pill.target = '_blank';
-        pill.rel = 'noopener noreferrer';
-        pill.title = `AI Predicted: Check "${movieTitle}" on ${aiPredictionName}`;
-
-        pill.innerHTML = `
-          <i data-lucide="sparkles" class="small-icon"></i>
-          <span>AI Prediction: ${aiPredictionName}</span>
-        `;
-
-        container.appendChild(pill);
-        
-        // Remove the predicted provider from the remaining suggestions to avoid duplicates
-        suggestions = suggestions.filter(s => s.name.toLowerCase() !== aiPredictionName.toLowerCase());
-      }
-    }
-
-    // Render remaining standard suggestion pills
-    suggestions.forEach(provider => {
-      const href = buildGoogleProviderSearchUrl(movieTitle, movieYear, langSuffix, { provider_id: provider.id, provider_name: provider.name }, 'watch');
+      const href = buildGoogleProviderSearchUrl(movieTitle, movieYear, langSuffix, aiProvider, 'watch');
 
       const pill = document.createElement('a');
-      pill.className = 'provider-pill provider-pill--suggestion';
+      pill.className = 'provider-pill provider-pill--ai-suggested';
       pill.href = href;
       pill.target = '_blank';
       pill.rel = 'noopener noreferrer';
-      pill.title = `Check "${movieTitle}" on ${provider.name}`;
+      pill.title = `AI Predicted: Check "${movieTitle}" on ${aiPredictionName}`;
 
       pill.innerHTML = `
-        <span>Check ${provider.name}</span>
+        <i data-lucide="sparkles" class="small-icon"></i>
+        <span>AI Prediction: ${aiPredictionName}</span>
       `;
 
       container.appendChild(pill);
-    });
+    }
 
-    // Initialize newly created dynamic icons (like the sparkles on the AI pill)
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+      lucide.createIcons();
+    }
   }
 
   flatrateList.forEach(provider => {

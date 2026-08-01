@@ -556,12 +556,35 @@ Used in the detail modal to collect watch-provider data for the user's region fi
 
 ---
 
-## Testing Strategy (TODO)
+## Automated Regression Testing Framework
 
-- **Unit Tests:** `weightedRating()`, `matchesOttKeyword()`, `detectWatchRegion()` — Jest
-- **Integration Tests:** Full `discoverMovies()` flow with mocked TMDb API — Cypress / Playwright
-- **E2E Tests:** User journeys (search by title, filter by language, verify OTT pill, etc.) — Selenium / Playwright
-- **Performance Tests:** Measure API call latency, UI render time, tile load time — Lighthouse / WebPageTest
+CineSearch includes a mandatory, automated regression test suite that covers all backend server endpoints, client-side business logic, historical bug fixes, and feature additions.
+
+### Architecture & Mechanics
+- **Frontend Logic Module (`app.core.js`)**: Exposes pure client-side algorithms (`weightedRating`, `isLikelyTvSeriesOrSpecial`, `matchesOttKeyword`, `detectWatchRegion`, `parseAiJsonCotResponse`, `buildGoogleProviderSearchUrl`) via Universal Module Definition (UMD) for browser & Node.js test environments.
+- **Backend Integration Tests (`tests/integration/`)**: Validates server proxy routes (`/ping`, `/keys`, `/userdata`, `/unload`, and `Cache-Control` headers) via Python `unittest` HTTP fixtures.
+- **Regression Tests (`tests/regression/`)**: Enforces stability for past bug fixes (heartbeat cancellation, user_data resilience).
+- **Master Test Runner (`tests/run_regression_suite.py`)**: Executes both Node.js (`node --test`) and Python (`unittest`) test suites, returning exit code `0` on success or `1` on failure.
+- **Git Pre-commit Hook (`.git/hooks/pre-commit`)**: Automatically executes the test suite prior to every commit, blocking commits if any test fails.
+
+### Execution Commands
+```bash
+# Run full regression suite (via npm or Python runner)
+npm test
+# OR
+python3 tests/run_regression_suite.py
+```
+
+### Auto-Registration Workflow for New Features & Bug Fixes
+Every time a new feature is added or a bug is fixed, a corresponding test MUST be added to the suite. Use the auto-scaffolder CLI to create and register test cases automatically:
+
+```bash
+# Add a new feature test
+python3 tests/add_test.py --type feature --name dark_mode_sync --description "Verify theme initialization" --lang js
+
+# Add a bug fix regression test
+python3 tests/add_test.py --type bug --name ott_filter_reset --description "Verify OTT filter reset behavior" --lang js
+```
 
 ---
 

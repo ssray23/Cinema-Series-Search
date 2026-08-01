@@ -1,0 +1,21 @@
+{
+  "name": "cinema-search",
+  "version": "1.2.0",
+  "description": "Modern Cinema & Series Discovery SPA with AI OTT Predictions",
+  "scripts": {
+    "test": "python3 tests/run_regression_suite.py",
+    "test:add": "python3 tests/add_test.py",
+    "install:hooks": "./scripts/install_hooks.sh"
+  },
+  "keywords": [
+    "cinema",
+    "movies",
+    "tv-shows",
+    "tmdb",
+    "ott",
+    "gemini",
+    "claude"
+  ],
+  "author": "ssray23",
+  "license": "MIT"
+}

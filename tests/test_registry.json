@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-08-01",
+  "suites": {
+    "unit": [
+      {
+        "file": "tests/unit/test_weighted_rating.test.js",
+        "description": "Adaptive weighted rating dampening for movies and series"
+      },
+      {
+        "file": "tests/unit/test_short_film_exclusion.test.js",
+        "description": "Short film, TV movie, and unscripted performance special exclusion rules"
+      },
+      {
+        "file": "tests/unit/test_ott_keyword_matching.test.js",
+        "description": "Word-boundary matching for OTT platform keyword detection"
+      },
+      {
+        "file": "tests/unit/test_search_sort_pipelines.test.js",
+        "description": "Title match score relevance and multi-mode sorting comparative logic"
+      },
+      {
+        "file": "tests/unit/test_helpers_and_urls.test.js",
+        "description": "Region detection, Google semantic provider search URL, and AI JSON CoT parsing"
+      }
+    ],
+    "integration": [
+      {
+        "file": "tests/integration/test_server_api.py",
+        "description": "Backend HTTP server proxy endpoints (/ping, /keys, /userdata, no-cache headers)"
+      }
+    ],
+    "regression": [
+      {
+        "file": "tests/regression/test_historical_bugs.py",
+        "description": "Historical bug fixes (heartbeat shutdown cancellation, user_data resilience)"
+      }
+    ],
+    "features": [
+      {
+        "file": "tests/features/test_theme_and_mode_sync.test.js",
+        "description": "Theme adaptation and cinema/series mode background dynamic gradients"
+      }
+    ],
+    "bugs": [
+      {
+        "file": "tests/bugs/test_ott_false_positives_and_theatrical_window.test.js",
+        "description": "Verify exclusion of production companies for fresh theatrical releases and elimination of dummy suggestion pills"
+      }
+    ]
+  }
+}

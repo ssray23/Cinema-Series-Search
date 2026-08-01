@@ -46,6 +46,10 @@
       {
         "file": "tests/bugs/test_ott_false_positives_and_theatrical_window.test.js",
         "description": "Verify exclusion of production companies for fresh theatrical releases and elimination of dummy suggestion pills"
+      },
+      {
+        "file": "tests/bugs/test_heart_accent_colour.test.js",
+        "description": "Heart icon .hearted class uses var(--accent-primary) — red in Cinema, blue in Series — not hardcoded red values"
       }
     ]
   }

@@ -71,6 +71,92 @@ let isLoadingMore = false;
 let firstNewCardIndex = -1; // Index where newly loaded cards start (-1 = fresh search)
 let currentTheme = localStorage.getItem('theme') || 'dark';
 
+// Per-mode independent search criteria memory (retains separate preferences for Cinema and Series)
+const modeCriteria = {
+  movie: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
+  tv: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
+};
+
+function saveCurrentModeCriteria() {
+  const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
+  modeCriteria[currentMode] = {
+    title: typeof titleInput !== 'undefined' && titleInput ? titleInput.value : '',
+    year: activeYearEl ? activeYearEl.value : '',
+    language: typeof languageSelect !== 'undefined' && languageSelect ? languageSelect.value : '',
+    genre: typeof genreSelect !== 'undefined' && genreSelect ? genreSelect.value : '',
+    actorId: selectedActorId,
+    actorName: typeof actorChipName !== 'undefined' && actorChipName ? actorChipName.textContent : '',
+    actorImg: typeof actorChipImg !== 'undefined' && actorChipImg ? actorChipImg.src : '',
+    actressId: selectedActressId,
+    actressName: typeof actressChipName !== 'undefined' && actressChipName ? actressChipName.textContent : '',
+    actressImg: typeof actressChipImg !== 'undefined' && actressChipImg ? actressChipImg.src : ''
+  };
+}
+
+function restoreModeCriteria(targetMode) {
+  const data = modeCriteria[targetMode] || {
+    title: '', year: '', language: '', genre: '',
+    actorId: null, actorName: '', actorImg: '',
+    actressId: null, actressName: '', actressImg: ''
+  };
+
+  if (typeof genreSelect !== 'undefined' && genreSelect) {
+    genreSelect.innerHTML = targetMode === 'movie' ? MOVIE_GENRES : TV_GENRES;
+    genreSelect.value = data.genre || '';
+  }
+
+  if (typeof titleInput !== 'undefined' && titleInput) {
+    titleInput.value = data.title || '';
+    if (typeof titleClearBtn !== 'undefined') updateInlineClearButton(titleInput, titleClearBtn);
+    titleInput.placeholder = targetMode === 'movie' 
+      ? "e.g. Inception, Breaking Bad, Ocean..." 
+      : "e.g. Breaking Bad, The Office, Game of Thrones...";
+  }
+
+  const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
+  if (activeYearEl) {
+    activeYearEl.value = data.year || '';
+  }
+
+  if (typeof languageSelect !== 'undefined' && languageSelect) {
+    languageSelect.value = data.language || '';
+  }
+
+  if (data.actorId) {
+    selectedActorId = data.actorId;
+    if (typeof actorChipName !== 'undefined' && actorChipName) actorChipName.textContent = data.actorName;
+    if (typeof actorChipImg !== 'undefined' && actorChipImg) actorChipImg.src = data.actorImg;
+    if (typeof actorChip !== 'undefined' && actorChip) actorChip.classList.remove('hidden');
+    if (typeof actorInputWrapper !== 'undefined' && actorInputWrapper) actorInputWrapper.classList.add('hidden');
+  } else {
+    selectedActorId = null;
+    if (typeof actorChip !== 'undefined' && actorChip) actorChip.classList.add('hidden');
+    if (typeof actorInputWrapper !== 'undefined' && actorInputWrapper) actorInputWrapper.classList.remove('hidden');
+    if (typeof actorInput !== 'undefined' && actorInput) {
+      actorInput.value = '';
+      if (typeof actorClearBtn !== 'undefined') updateInlineClearButton(actorInput, actorClearBtn);
+    }
+  }
+
+  if (data.actressId) {
+    selectedActressId = data.actressId;
+    if (typeof actressChipName !== 'undefined' && actressChipName) actressChipName.textContent = data.actressName;
+    if (typeof actressChipImg !== 'undefined' && actressChipImg) actressChipImg.src = data.actressImg;
+    if (typeof actressChip !== 'undefined' && actressChip) actressChip.classList.remove('hidden');
+    if (typeof actressInputWrapper !== 'undefined' && actressInputWrapper) actressInputWrapper.classList.add('hidden');
+  } else {
+    selectedActressId = null;
+    if (typeof actressChip !== 'undefined' && actressChip) actressChip.classList.add('hidden');
+    if (typeof actressInputWrapper !== 'undefined' && actressInputWrapper) actressInputWrapper.classList.remove('hidden');
+    if (typeof actressInput !== 'undefined' && actressInput) {
+      actressInput.value = '';
+      if (typeof actressClearBtn !== 'undefined') updateInlineClearButton(actressInput, actressClearBtn);
+    }
+  }
+
+  updateHasValue();
+}
+
 // --- Watchlist State ---
 let watchlist = [];
 let isWatchlistView = false;
@@ -218,6 +304,8 @@ function updateHasValue() {
   const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
   const fields = [
     { el: titleInput },
+    { el: typeof actorInput !== 'undefined' ? actorInput : document.getElementById('actor-input') },
+    { el: typeof actressInput !== 'undefined' ? actressInput : document.getElementById('actress-input') },
     { el: activeYearEl },
     { el: languageSelect },
     { el: genreSelect },
@@ -2063,7 +2151,11 @@ function setupEventListeners() {
     const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
     if (activeYearEl) activeYearEl.value = '';
     languageSelect.value = '';
-    if (genreSelect) genreSelect.value = '';
+    modeCriteria[currentMode] = {
+      title: '', year: '', language: '', genre: '',
+      actorId: null, actorName: '', actorImg: '',
+      actressId: null, actressName: '', actressImg: ''
+    };
 
     updateHasValue();
     
@@ -2131,9 +2223,15 @@ function setupEventListeners() {
 
 document.querySelectorAll('#mode-toggle .segmented-option').forEach(btn => {
   btn.addEventListener('click', (e) => {
+    const newMode = e.currentTarget.dataset.mode;
+    if (newMode === currentMode) return;
+
+    // Save criteria for current mode before switching
+    saveCurrentModeCriteria();
+
     document.querySelectorAll('#mode-toggle .segmented-option').forEach(b => b.classList.remove('active'));
     e.currentTarget.classList.add('active');
-    currentMode = e.currentTarget.dataset.mode;
+    currentMode = newMode;
     
     // Update Theme and Icon
     document.body.classList.toggle('series-mode', currentMode === 'tv');
@@ -2172,32 +2270,8 @@ document.querySelectorAll('#mode-toggle .segmented-option').forEach(btn => {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    // Update genres dropdown
-    if (genreSelect) {
-      genreSelect.innerHTML = currentMode === 'movie' ? MOVIE_GENRES : TV_GENRES;
-    }
-    
-    // Clear search fields to prevent queries leaking across modes
-    if (titleInput) {
-      titleInput.value = '';
-      titleInput.placeholder = currentMode === 'movie' 
-        ? "e.g. Inception, Breaking Bad, Ocean..." 
-        : "e.g. Breaking Bad, The Office, Game of Thrones...";
-    }
-    const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
-    if (activeYearEl) activeYearEl.value = '';
-    
-    // Clear actors
-    selectedActorId = null;
-    selectedActressId = null;
-    if (actorChip) actorChip.classList.add('hidden');
-    if (actressChip) actressChip.classList.add('hidden');
-    if (actorInputWrapper) actorInputWrapper.classList.remove('hidden');
-    if (actressInputWrapper) actressInputWrapper.classList.remove('hidden');
-    if (actorInput) actorInput.value = '';
-    if (actressInput) actressInput.value = '';
-    
-    updateHasValue();
+    // Restore saved independent search criteria for target mode
+    restoreModeCriteria(currentMode);
 
     currentPage = 1;
     discoverMovies();

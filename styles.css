@@ -976,8 +976,8 @@ body.light-theme .header-control:hover {
 
 .chip-name {
   font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 400;
+  color: var(--accent-primary);
 }
 
 .chip-remove {

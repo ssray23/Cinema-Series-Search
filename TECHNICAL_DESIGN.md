@@ -311,6 +311,13 @@ let selectedActressId = null;
 let tmdbApiKey = localStorage.getItem('tmdb_api_key') || 'default_key';
 let currentTheme = localStorage.getItem('theme') || 'dark';
 
+// Per-mode independent search criteria memory
+const modeCriteria = {
+  movie: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
+  tv: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
+};
+```
+
 ### Watchlist & Data Persistence (`user_data.json`)
 ```javascript
 let watchlist = []; // Loaded from /userdata
@@ -318,15 +325,12 @@ let watchlist = []; // Loaded from /userdata
 
 Watchlist items, theme preferences, and custom OTT platforms are persisted securely to a local `user_data.json` file on the hard drive via the local Python proxy. When `isWatchlistView` is enabled, the search panel is hidden, the main grid adapts to full width (`1fr`), and the results grid bypasses the TMDb API and re-renders entirely from the local `watchlist` array, seamlessly integrating with client-side sorting and mode filters.
 
-### Filter State
-Filter UI values are read from DOM elements directly (no separate state object):
-```javascript
-const titleQuery = titleInput.value.trim();
-const year = yearInput.value ? parseInt(yearInput.value, 10) : null;
-const language = languageSelect.value || null;
-const genre = genreSelect.value || null;
-const ottOnly = ottOnlyCheckbox.checked;
-```
+### Filter State & Per-Mode Retention
+Filter UI values are managed per mode (`modeCriteria`). When toggling between Cinema and Series modes:
+1. `saveCurrentModeCriteria()` saves the active UI search criteria for the current mode into `modeCriteria[currentMode]`.
+2. `restoreModeCriteria(targetMode)` restores the independent search criteria for `targetMode` into UI controls.
+3. Active selections (`.has-value`) are styled using `color: var(--accent-primary)` and non-bold font-weight (`400`), rendering Red (`#E31837`) for Cinema and Blue (`#0072C6`) for Series.
+
 
 ---
 

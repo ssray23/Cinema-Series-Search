@@ -409,10 +409,17 @@ body {
   padding: 6px 12px;
 }
 
-.select-wrapper.has-value select.mac-input {
-  font-weight: 600;
-  color: var(--text-main);
+.select-wrapper.has-value select.mac-input,
+.input-with-icon.has-value input.mac-input,
+.search-panel .has-value .mac-input {
+  font-weight: 400;
+  color: var(--accent-primary);
 }
+
+.select-wrapper.has-value::before {
+  background-color: var(--accent-primary);
+}
+
 
 /* Detail Modal Window Typography */
 .dialog-header h2,

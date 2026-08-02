@@ -40,6 +40,10 @@
       {
         "file": "tests/features/test_theme_and_mode_sync.test.js",
         "description": "Theme adaptation and cinema/series mode background dynamic gradients"
+      },
+      {
+        "file": "tests/features/test_mode_switch_retains_criteria.test.js",
+        "description": "Retain search criteria (title, year, language, genre mapping, actor, actress) when toggling mode"
       }
     ],
     "bugs": [
@@ -54,6 +58,10 @@
       {
         "file": "tests/bugs/test_ott_pill_size_matches_google_btn.test.js",
         "description": "OTT provider pill padding, font-size, font-weight, gap, border-radius, and icon size match the Search with Google button"
+      },
+      {
+        "file": "tests/bugs/test_search_panel_selection_style.test.js",
+        "description": "Search panel selections use var(--accent-primary) (red for movies, blue for series) without bold font weight"
       }
     ]
   }

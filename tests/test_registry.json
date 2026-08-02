@@ -44,6 +44,10 @@
       {
         "file": "tests/features/test_mode_switch_retains_criteria.test.js",
         "description": "Retain search criteria (title, year, language, genre mapping, actor, actress) when toggling mode"
+      },
+      {
+        "file": "tests/features/test_genre_exclusion.test.js",
+        "description": "Exclusion of Horror and arbitrary genres via without_genres API parameter and per-mode state"
       }
     ],
     "bugs": [

@@ -73,17 +73,19 @@ let currentTheme = localStorage.getItem('theme') || 'dark';
 
 // Per-mode independent search criteria memory (retains separate preferences for Cinema and Series)
 const modeCriteria = {
-  movie: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
-  tv: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
+  movie: { title: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
+  tv: { title: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
 };
 
 function saveCurrentModeCriteria() {
   const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
+  const activeExcluded = (modeCriteria[currentMode] && modeCriteria[currentMode].excludedGenres) ? modeCriteria[currentMode].excludedGenres : [];
   modeCriteria[currentMode] = {
     title: typeof titleInput !== 'undefined' && titleInput ? titleInput.value : '',
     year: activeYearEl ? activeYearEl.value : '',
     language: typeof languageSelect !== 'undefined' && languageSelect ? languageSelect.value : '',
     genre: typeof genreSelect !== 'undefined' && genreSelect ? genreSelect.value : '',
+    excludedGenres: [...activeExcluded],
     actorId: selectedActorId,
     actorName: typeof actorChipName !== 'undefined' && actorChipName ? actorChipName.textContent : '',
     actorImg: typeof actorChipImg !== 'undefined' && actorChipImg ? actorChipImg.src : '',
@@ -93,9 +95,41 @@ function saveCurrentModeCriteria() {
   };
 }
 
+function populateExcludeGenreSelect(mode = currentMode) {
+  const selectEl = document.getElementById('exclude-genre-select');
+  if (!selectEl) return;
+  const rawGenresHtml = mode === 'movie' ? MOVIE_GENRES : TV_GENRES;
+  selectEl.innerHTML = '<option value="">+ Exclude Genre...</option>' + rawGenresHtml.replace('<option value="">Any Genre</option>', '');
+  selectEl.value = '';
+}
+
+function renderExcludedGenreChips() {
+  const container = document.getElementById('excluded-genres-container');
+  const list = document.getElementById('excluded-genres-list');
+  if (!container || !list) return;
+  const excluded = (modeCriteria[currentMode] && modeCriteria[currentMode].excludedGenres) ? modeCriteria[currentMode].excludedGenres : [];
+  if (excluded.length === 0) {
+    container.classList.add('hidden');
+    list.innerHTML = '';
+    return;
+  }
+  
+  container.classList.remove('hidden');
+  list.innerHTML = excluded.map(g => `
+    <span class="excluded-genre-chip" data-id="${g.id}">
+      🚫 ${g.name}
+      <button type="button" class="remove-excluded-btn" data-id="${g.id}" aria-label="Remove excluded genre ${g.name}">
+        <i data-lucide="x"></i>
+      </button>
+    </span>
+  `).join('');
+  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function restoreModeCriteria(targetMode) {
   const data = modeCriteria[targetMode] || {
-    title: '', year: '', language: '', genre: '',
+    title: '', year: '', language: '', genre: '', excludedGenres: [],
     actorId: null, actorName: '', actorImg: '',
     actressId: null, actressName: '', actressImg: ''
   };
@@ -104,6 +138,9 @@ function restoreModeCriteria(targetMode) {
     genreSelect.innerHTML = targetMode === 'movie' ? MOVIE_GENRES : TV_GENRES;
     genreSelect.value = data.genre || '';
   }
+
+  populateExcludeGenreSelect(targetMode);
+  renderExcludedGenreChips();
 
   if (typeof titleInput !== 'undefined' && titleInput) {
     titleInput.value = data.title || '';
@@ -1006,9 +1043,19 @@ async function discoverMovies() {
   // Always exclude Short films (TMDb genre ID 10755) from movie discover results.
   // Also enforce a minimum runtime of 40 minutes to catch shorts that TMDb doesn't
   // tag with the Short genre (e.g. 8-min or 14-min films misclassified as "Feature Film").
+  const activeExcluded = (modeCriteria[currentMode] && modeCriteria[currentMode].excludedGenres) ? modeCriteria[currentMode].excludedGenres : [];
+  const excludedIds = activeExcluded.map(g => String(g.id));
+
+  let withoutGenresList = [];
   if (currentMode === 'movie') {
-    params.without_genres = '10755';
+    withoutGenresList.push('10755');
     params['with_runtime.gte'] = 40;
+  }
+  excludedIds.forEach(id => {
+    if (!withoutGenresList.includes(id)) withoutGenresList.push(id);
+  });
+  if (withoutGenresList.length > 0) {
+    params.without_genres = withoutGenresList.join(',');
   }
 
   // If sorting is by popularity or release date, pass to TMDb discover.
@@ -1105,6 +1152,14 @@ async function discoverMovies() {
         }
       }
       
+      
+      // Apply client-side excluded genre filtering for all search modes
+      if (excludedIds.length > 0) {
+        pageResults = pageResults.filter(item => {
+          if (!item.genre_ids) return true;
+          return !item.genre_ids.some(gid => excludedIds.includes(String(gid)));
+        });
+      }
       
       // Apply client-side language filtering for search/movie
       if (isSearchMode && language) {
@@ -2152,10 +2207,11 @@ function setupEventListeners() {
     if (activeYearEl) activeYearEl.value = '';
     languageSelect.value = '';
     modeCriteria[currentMode] = {
-      title: '', year: '', language: '', genre: '',
+      title: '', year: '', language: '', genre: '', excludedGenres: [],
       actorId: null, actorName: '', actorImg: '',
       actressId: null, actressName: '', actressImg: ''
     };
+    renderExcludedGenreChips();
 
     updateHasValue();
     
@@ -2179,6 +2235,42 @@ function setupEventListeners() {
     // Discover movies for the default state (landing page behavior)
     discoverMovies();
   });
+
+  // Exclude Genre select listener
+  const excludeGenreSelectEl = document.getElementById('exclude-genre-select');
+  if (excludeGenreSelectEl) {
+    excludeGenreSelectEl.addEventListener('change', (e) => {
+      const genreId = e.target.value;
+      if (!genreId) return;
+      const genreName = e.target.options[e.target.selectedIndex].text;
+      const activeExcluded = (modeCriteria[currentMode] && modeCriteria[currentMode].excludedGenres) ? modeCriteria[currentMode].excludedGenres : [];
+      if (!activeExcluded.some(g => String(g.id) === String(genreId))) {
+        activeExcluded.push({ id: genreId, name: genreName });
+        modeCriteria[currentMode].excludedGenres = activeExcluded;
+      }
+      e.target.value = '';
+      renderExcludedGenreChips();
+      currentPage = 1;
+      discoverMovies();
+    });
+  }
+
+  // Excluded genres container remove chip click listener
+  const excludedContainerEl = document.getElementById('excluded-genres-container');
+  if (excludedContainerEl) {
+    excludedContainerEl.addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('.remove-excluded-btn');
+      if (removeBtn) {
+        const genreId = removeBtn.dataset.id;
+        if (modeCriteria[currentMode] && modeCriteria[currentMode].excludedGenres) {
+          modeCriteria[currentMode].excludedGenres = modeCriteria[currentMode].excludedGenres.filter(g => String(g.id) !== String(genreId));
+        }
+        renderExcludedGenreChips();
+        currentPage = 1;
+        discoverMovies();
+      }
+    });
+  }
 
   // Submit search form
   searchForm.addEventListener('submit', (e) => {

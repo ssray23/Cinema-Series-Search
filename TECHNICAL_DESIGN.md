@@ -313,8 +313,8 @@ let currentTheme = localStorage.getItem('theme') || 'dark';
 
 // Per-mode independent search criteria memory
 const modeCriteria = {
-  movie: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
-  tv: { title: '', year: '', language: '', genre: '', actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
+  movie: { title: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
+  tv: { title: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
 };
 ```
 
@@ -325,11 +325,13 @@ let watchlist = []; // Loaded from /userdata
 
 Watchlist items, theme preferences, and custom OTT platforms are persisted securely to a local `user_data.json` file on the hard drive via the local Python proxy. When `isWatchlistView` is enabled, the search panel is hidden, the main grid adapts to full width (`1fr`), and the results grid bypasses the TMDb API and re-renders entirely from the local `watchlist` array, seamlessly integrating with client-side sorting and mode filters.
 
-### Filter State & Per-Mode Retention
+### Filter State, Per-Mode Retention & Genre Exclusion
 Filter UI values are managed per mode (`modeCriteria`). When toggling between Cinema and Series modes:
-1. `saveCurrentModeCriteria()` saves the active UI search criteria for the current mode into `modeCriteria[currentMode]`.
-2. `restoreModeCriteria(targetMode)` restores the independent search criteria for `targetMode` into UI controls.
-3. Active selections (`.has-value`) are styled using `color: var(--accent-primary)` and non-bold font-weight (`400`), rendering Red (`#E31837`) for Cinema and Blue (`#0072C6`) for Series.
+1. `saveCurrentModeCriteria()` saves active UI search criteria (including active `excludedGenres`) into `modeCriteria[currentMode]`.
+2. `restoreModeCriteria(targetMode)` restores the independent search criteria for `targetMode` into UI controls and populates `excludeGenreSelect`.
+3. **Genre Exclusion**: Users can select one or more genres to exclude (e.g., *Horror*, *Romance*). Excluded genres generate interactive badges (`.excluded-genre-chip`) styled adaptively with `var(--accent-primary)` and `rgba(var(--accent-primary-rgb), ...)` (Red in Cinema mode, Blue in Series mode).
+4. Excluded genre IDs are passed to TMDb Discover API via `params.without_genres` (combined with short film exclusion `10755`) and enforced via client-side post-filtering across keyword searches and watchlist views.
+5. Active search criteria selections (`.has-value`) use `color: var(--accent-primary)` and non-bold font-weight (`400`).
 
 
 ---

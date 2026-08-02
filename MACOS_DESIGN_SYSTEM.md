@@ -49,6 +49,12 @@ The design system enforces 100% color harmony based on the active media mode:
 
 ### OTT Provider Pill Badges
 - **Symmetric Icon Insets**: `padding: 4px 10px 4px 4px` ensures top, bottom, and left offset distances from the pill border to the provider logo image are 100% equal (`4px`).
+- **Typography & Font Weight**: `font-weight: 500` (medium weight, non-bold) for clean legibility across streaming and rental badges (`.provider-pill`).
+
+### Detail Modal Typography & Inline Heart Button
+- **Title Header & Heart Button**: `#dialog-title` font-size set to `24px` (+20% size increase). Paired with an inline `#dialog-heart-btn` inside `.dialog-title-wrapper` (`display: flex; align-items: center; gap: 0.65rem`) that automatically inherits mode accent color (`var(--accent-primary)`: Red `#E31837` for Cinema, Blue `#0072C6` for Series).
+- **Modal Section Headers**: `Overview`, `Popularity Score`, `Total Vote Count`, `Where to Stream`, and `Rent / Buy` headers set to `14.4px` (+20% size increase).
+- **Genre Pills**: Sleek, compact genre pills (`.genre-pill`) set to `font-size: 0.72rem` with refined `padding: 0.15rem 0.55rem`.
 
 ### Segmented Controls (Switchers)
 - **Shared Proportions**: Standardized padding (`4px 8px`) and height across all switchers (Cinema/Series main switcher, Sort By selector, Settings API/OTT tabs).

@@ -173,6 +173,8 @@ const dialogOverview = document.getElementById('dialog-overview');
 const dialogPopularity = document.getElementById('dialog-popularity');
 const dialogVotes = document.getElementById('dialog-votes');
 const googleSearchBtn = document.getElementById('google-search-btn');
+const dialogHeartBtn = document.getElementById('dialog-heart-btn');
+let currentDetailMovie = null;
 
 // --- Helper: De-bounce function ---
 function debounce(func, wait) {
@@ -1387,6 +1389,11 @@ async function openMovieDetails(movieId) {
   // heading and poster alt-text for every series (title.textContent was undefined).
   dialogPoster.alt = movie.title || movie.name;
   dialogTitle.textContent = movie.title || movie.name;
+  currentDetailMovie = movie;
+  const isHearted = watchlist.some(m => m.id === movie.id);
+  if (dialogHeartBtn) {
+    dialogHeartBtn.classList.toggle('hearted', isHearted);
+  }
   const movieDateStr = movie.release_date || movie.first_air_date;
   const movieYear = movieDateStr ? movieDateStr.substring(0, 4) : '';
   dialogYear.textContent = movieYear || 'N/A';
@@ -2014,6 +2021,20 @@ function setupEventListeners() {
       detailDialog.close();
     }
   });
+
+  // Heart button directly in detail title
+  if (dialogHeartBtn) {
+    dialogHeartBtn.addEventListener('click', (e) => {
+      if (currentDetailMovie) {
+        toggleWatchlist(currentDetailMovie, e);
+        const isHearted = watchlist.some(m => m.id === currentDetailMovie.id);
+        const gridCardBtn = document.querySelector(`.movie-card[data-id="${currentDetailMovie.id}"] .card-watchlist-btn`);
+        if (gridCardBtn) {
+          gridCardBtn.classList.toggle('hearted', isHearted);
+        }
+      }
+    });
+  }
 
   // Reset/Clear button
   clearBtn.addEventListener('click', () => {

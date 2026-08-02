@@ -39,11 +39,9 @@ test('STYLE: provider-pill and btn-google-search share the same font-size', () =
   assert.ok(google.includes('font-size: 0.8rem'), 'btn-google-search must use font-size 0.8rem');
 });
 
-test('STYLE: provider-pill and btn-google-search share the same font-weight', () => {
+test('STYLE: provider-pill font-weight is medium (500) and not bold', () => {
   const pill = getPillBlock();
-  const google = getGoogleBtnBlock();
-  assert.ok(pill.includes('font-weight: 700'), 'provider-pill must use font-weight 700');
-  assert.ok(google.includes('font-weight: 700'), 'btn-google-search must use font-weight 700');
+  assert.ok(pill.includes('font-weight: 500'), 'provider-pill must use font-weight 500');
 });
 
 test('STYLE: provider-pill and btn-google-search share the same gap', () => {

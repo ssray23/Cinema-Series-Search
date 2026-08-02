@@ -2623,6 +2623,8 @@ async function loadUserData() {
 async function init() {
   applyTheme();
   populateYearSelect();
+  populateExcludeGenreSelect();
+  renderExcludedGenreChips();
   setupEventListeners();
 
   try {

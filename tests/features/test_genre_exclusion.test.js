@@ -10,5 +10,7 @@ test('FEATURE: Genre exclusion parameter building and per-mode state memory', ()
   assert.ok(appJs.includes('params.without_genres'), 'app.js must construct params.without_genres for TMDb API');
   assert.ok(appJs.includes('renderExcludedGenreChips'), 'app.js must define renderExcludedGenreChips');
   assert.ok(appJs.includes('populateExcludeGenreSelect'), 'app.js must define populateExcludeGenreSelect');
+  const initMatch = appJs.match(/async function init\(\)[\s\S]*?\n\}/);
+  assert.ok(initMatch && initMatch[0].includes('populateExcludeGenreSelect()'), 'init() must call populateExcludeGenreSelect() on page load');
   assert.ok(appJs.includes('excludedGenres: []'), 'modeCriteria must include excludedGenres array per mode');
 });

@@ -1023,9 +1023,9 @@ body.light-theme .header-control:hover {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background: rgba(var(--accent-primary-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+  color: var(--accent-primary);
   font-size: 11px;
   font-weight: 500;
   padding: 3px 8px;
@@ -1037,7 +1037,7 @@ body.light-theme .header-control:hover {
 .excluded-genre-chip .remove-excluded-btn {
   background: transparent;
   border: none;
-  color: #f87171;
+  color: var(--accent-primary);
   cursor: pointer;
   padding: 0;
   display: flex;

@@ -78,6 +78,10 @@
       {
         "file": "tests/bugs/test_search_panel_selection_style.test.js",
         "description": "Search panel selections use var(--accent-primary) (red for movies, blue for series) without bold font weight"
+      },
+      {
+        "file": "tests/bugs/test_search_input_accent_colour.test.js",
+        "description": "Search inputs use mode accent color only when text is typed via :not(:placeholder-shown)"
       }
     ]
   }

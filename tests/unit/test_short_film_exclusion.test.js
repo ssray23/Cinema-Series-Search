@@ -27,8 +27,19 @@ test('isLikelyTvSeriesOrSpecial: Making of and Short film keywords', () => {
   const makingOfTitle = { title: 'The Talented Mr. Ripley: Making the Soundtrack', genre_ids: [99] };
   assert.equal(core.isLikelyTvSeriesOrSpecial(makingOfTitle), true);
 
+  const reflectionsTitle = { title: 'Reflections on The Talented Mr. Ripley', genre_ids: [99] };
+  assert.equal(core.isLikelyTvSeriesOrSpecial(reflectionsTitle), true);
+
   const shortFilmOverview = { title: 'Some Indie Movie', overview: 'This short film explores...', genre_ids: [18] };
   assert.equal(core.isLikelyTvSeriesOrSpecial(shortFilmOverview), true);
+});
+
+test('isLikelyTvSeriesOrSpecial: TMDb video flag', () => {
+  const featurette = { title: 'Behind the Scenes', video: true };
+  assert.equal(core.isLikelyTvSeriesOrSpecial(featurette), true);
+
+  const normalMovie = { title: 'The Matrix', video: false };
+  assert.equal(core.isLikelyTvSeriesOrSpecial(normalMovie), false);
 });
 
 test('isLikelyTvSeriesOrSpecial: S01E01 pattern in title', () => {

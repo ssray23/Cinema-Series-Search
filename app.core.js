@@ -25,8 +25,14 @@
       return true;
     }
 
+    // 1b. Filter out TMDb "video" flagged content (straight-to-video, behind-the-scenes featurettes, etc.)
+    // discover/movie already excludes these (include_video=false), so this applies it to search/movie too.
+    if (movie.video === true) {
+      return true;
+    }
+
     // 2. Filter out TV episode / season / series formats in the title
-    const episodePattern = /\b(episode|season|tv series|tv show|television series|web series|miniseries|mini-series|talk show|game show|reality show|stand-up|stand up|comedy special|comedy show|making of|making the|behind the scenes|short film)\b/i;
+    const episodePattern = /\b(episode|season|tv series|tv show|television series|web series|miniseries|mini-series|talk show|game show|reality show|stand-up|stand up|comedy special|comedy show|making of|making the|behind the scenes|short film|reflections on)\b/i;
     if (episodePattern.test(title)) {
       return true;
     }

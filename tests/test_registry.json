@@ -48,6 +48,14 @@
       {
         "file": "tests/features/test_genre_exclusion.test.js",
         "description": "Exclusion of Horror and arbitrary genres via without_genres API parameter and per-mode state"
+      },
+      {
+        "file": "tests/features/test_semantic_genre_mapping.test.js",
+        "description": "Tests mapping of descriptive keywords to TMDB genre IDs in movie and series modes"
+      },
+      {
+        "file": "tests/features/test_spelling_variants.test.js",
+        "description": "Tests normalization of US and UK spelling variants"
       }
     ],
     "bugs": [
@@ -57,7 +65,7 @@
       },
       {
         "file": "tests/bugs/test_heart_accent_colour.test.js",
-        "description": "Heart icon .hearted class uses var(--accent-primary) — red in Cinema, blue in Series — not hardcoded red values"
+        "description": "Heart icon .hearted class uses var(--accent-primary) \u2014 red in Cinema, blue in Series \u2014 not hardcoded red values"
       },
       {
         "file": "tests/bugs/test_ott_pill_size_matches_google_btn.test.js",

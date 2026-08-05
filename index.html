@@ -142,14 +142,28 @@
         </div>
         
         <form id="search-form" class="form-group">
-          <!-- Title Input -->
-          <div class="input-group">
-            <label for="title-input" id="title-label" class="form-label">Title / keyword</label>
-            <div class="input-with-icon has-inline-clear input-row">
-              <input type="text" id="title-input" class="mac-input" placeholder="e.g. Inception, Breaking Bad, Ocean..." autocomplete="off">
-              <button type="button" id="title-clear-btn" class="input-clear-btn hidden" aria-label="Clear title">
-                <i data-lucide="x"></i>
-              </button>
+          <!-- Title and Keyword Row -->
+          <div class="form-row flex-row" style="display: flex; gap: 10px;">
+            <!-- Title Input -->
+            <div class="input-group" style="flex: 1;">
+              <label for="title-input" id="title-label" class="form-label">Title</label>
+              <div class="input-with-icon has-inline-clear input-row">
+                <input type="text" id="title-input" class="mac-input" placeholder="e.g. Inception, Breaking Bad..." autocomplete="off">
+                <button type="button" id="title-clear-btn" class="input-clear-btn hidden" aria-label="Clear title">
+                  <i data-lucide="x"></i>
+                </button>
+              </div>
+            </div>
+            
+            <!-- Keyword Input -->
+            <div class="input-group" style="flex: 1;">
+              <label for="keyword-input" id="keyword-label" class="form-label">Keyword (Topic / Theme)</label>
+              <div class="input-with-icon has-inline-clear input-row">
+                <input type="text" id="keyword-input" class="mac-input" placeholder="e.g. expose, journalist, space..." autocomplete="off">
+                <button type="button" id="keyword-clear-btn" class="input-clear-btn hidden" aria-label="Clear keyword">
+                  <i data-lucide="x"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -217,6 +231,9 @@
                 <select id="year-select" class="mac-input">
                   <option value="">Any Year</option>
                 </select>
+                <button type="button" class="select-clear-btn hidden" id="year-clear-btn" aria-label="Clear year">
+                  <i data-lucide="x"></i>
+                </button>
               </div>
             </div>
 
@@ -237,6 +254,9 @@
                   <option value="it">Italian</option>
                   <option value="zh">Chinese</option>
                 </select>
+                <button type="button" class="select-clear-btn hidden" id="language-clear-btn" aria-label="Clear language">
+                  <i data-lucide="x"></i>
+                </button>
               </div>
             </div>
 
@@ -266,6 +286,9 @@
                   <option value="10752">War</option>
                   <option value="37">Western</option>
                 </select>
+                <button type="button" class="select-clear-btn hidden" id="genre-clear-btn" aria-label="Clear genre">
+                  <i data-lucide="x"></i>
+                </button>
               </div>
             </div>
 

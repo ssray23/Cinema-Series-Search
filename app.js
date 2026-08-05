@@ -73,8 +73,8 @@ let currentTheme = localStorage.getItem('theme') || 'dark';
 
 // Per-mode independent search criteria memory (retains separate preferences for Cinema and Series)
 const modeCriteria = {
-  movie: { title: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
-  tv: { title: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
+  movie: { title: '', keyword: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' },
+  tv: { title: '', keyword: '', year: '', language: '', genre: '', excludedGenres: [], actorId: null, actorName: '', actorImg: '', actressId: null, actressName: '', actressImg: '' }
 };
 
 function saveCurrentModeCriteria() {
@@ -82,6 +82,7 @@ function saveCurrentModeCriteria() {
   const activeExcluded = (modeCriteria[currentMode] && modeCriteria[currentMode].excludedGenres) ? modeCriteria[currentMode].excludedGenres : [];
   modeCriteria[currentMode] = {
     title: typeof titleInput !== 'undefined' && titleInput ? titleInput.value : '',
+    keyword: typeof keywordInput !== 'undefined' && keywordInput ? keywordInput.value : '',
     year: activeYearEl ? activeYearEl.value : '',
     language: typeof languageSelect !== 'undefined' && languageSelect ? languageSelect.value : '',
     genre: typeof genreSelect !== 'undefined' && genreSelect ? genreSelect.value : '',
@@ -146,8 +147,13 @@ function restoreModeCriteria(targetMode) {
     titleInput.value = data.title || '';
     if (typeof titleClearBtn !== 'undefined') updateInlineClearButton(titleInput, titleClearBtn);
     titleInput.placeholder = targetMode === 'movie' 
-      ? "e.g. Inception, Breaking Bad, Ocean..." 
-      : "e.g. Breaking Bad, The Office, Game of Thrones...";
+      ? "e.g. Inception, Breaking Bad..." 
+      : "e.g. Breaking Bad, The Office...";
+  }
+
+  if (typeof keywordInput !== 'undefined' && keywordInput) {
+    keywordInput.value = data.keyword || '';
+    if (typeof keywordClearBtn !== 'undefined') updateInlineClearButton(keywordInput, keywordClearBtn);
   }
 
   const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
@@ -222,6 +228,8 @@ const watchlistToggleBtn = document.getElementById('watchlist-toggle-btn');
 const watchlistIcon = document.getElementById('watchlist-icon');
 const titleInput = document.getElementById('title-input');
 const titleClearBtn = document.getElementById('title-clear-btn');
+const keywordInput = document.getElementById('keyword-input');
+const keywordClearBtn = document.getElementById('keyword-clear-btn');
 
 
 const searchForm = document.getElementById('search-form');
@@ -353,6 +361,14 @@ function updateHasValue() {
     if (!wrapper) return;
     wrapper.classList.toggle('has-value', el.value.trim() !== '');
   });
+
+  const yearClearBtn = document.getElementById('year-clear-btn');
+  const languageClearBtn = document.getElementById('language-clear-btn');
+  const genreClearBtn = document.getElementById('genre-clear-btn');
+  
+  if (yearClearBtn) yearClearBtn.classList.toggle('hidden', !activeYearEl || activeYearEl.value === '');
+  if (languageClearBtn) languageClearBtn.classList.toggle('hidden', !languageSelect || languageSelect.value === '');
+  if (genreClearBtn) genreClearBtn.classList.toggle('hidden', !genreSelect || genreSelect.value === '');
 }
 
 function updateInlineClearButton(inputEl, clearBtnEl) {
@@ -1025,6 +1041,52 @@ async function discoverMovies() {
   const genre = genreSelect ? genreSelect.value || null : null;
 
   
+  const keywordQuery = keywordInput ? keywordInput.value.trim() : '';
+
+  let activeKeywordId = null;
+  let mappedGenreId = null;
+
+  if (keywordQuery) {
+    if (typeof CineSearchCore !== 'undefined' && CineSearchCore.getSemanticGenreMapping) {
+      mappedGenreId = CineSearchCore.getSemanticGenreMapping(keywordQuery, currentMode);
+    }
+
+    if (mappedGenreId) {
+      // It's a semantic genre match; skip fetching keywords.
+    } else {
+      try {
+        let variantQuery = null;
+        if (typeof CineSearchCore !== 'undefined' && CineSearchCore.getSpellingVariants) {
+          variantQuery = CineSearchCore.getSpellingVariants(keywordQuery);
+        }
+
+        const queriesToRun = variantQuery ? [keywordQuery, variantQuery] : [keywordQuery];
+        
+        let allKeywords = [];
+        for (const q of queriesToRun) {
+          const data = await fetchFromTMDb('search/keyword', { query: q, page: 1 });
+          if (data.results) {
+            allKeywords = allKeywords.concat(data.results.slice(0, 5));
+          }
+        }
+        
+        if (allKeywords.length > 0) {
+          // Deduplicate by ID and combine
+          const uniqueKeywords = Array.from(new Map(allKeywords.map(item => [item.id, item])).values());
+          activeKeywordId = uniqueKeywords.map(k => k.id).join('|');
+        } else {
+          hideLoader();
+          renderResults([]);
+          const countText = document.getElementById('results-count-text');
+          if (countText) countText.innerHTML = `No keywords found for "<b>${keywordQuery}</b>"`;
+          return;
+        }
+      } catch (e) {
+        console.error('Error fetching keyword:', e);
+      }
+    }
+  }
+
   // Combine cast members. Comma = AND query in TMDb discover
   let withCast = [];
   if (selectedActorId) withCast.push(selectedActorId);
@@ -1108,14 +1170,24 @@ async function discoverMovies() {
   // dropped server-side and only reappeared via a client-side scan of ~100 items.
   // Year/genre/language are already handled as post-filters below (isSearchMode && year/genre/language),
   // so search mode can stay active whenever cast filters aren't in play.
-  const isSearchMode = titleQuery && !selectedActorId && !selectedActressId;
+  const isSearchMode = titleQuery && !selectedActorId && !selectedActressId && !activeKeywordId && !mappedGenreId;
   if (isSearchMode) {
     endpoint = `search/${currentMode}`;
     params.query = titleQuery;
   } else {
     if (language) params.with_original_language = language;
     if (castQuery) params.with_cast = castQuery;
-    if (genre) params.with_genres = genre;
+    
+    // Combine explicit genre with mapped keyword genre
+    let combinedGenres = [];
+    if (genre) combinedGenres.push(genre);
+    if (mappedGenreId) combinedGenres.push(mappedGenreId);
+    
+    if (combinedGenres.length > 0) {
+      params.with_genres = combinedGenres.join(',');
+    }
+    
+    if (activeKeywordId) params.with_keywords = activeKeywordId;
   }
 
     // FIX (Bug #2 / #3): this used to hard-exclude any title with vote_count below
@@ -1580,9 +1652,9 @@ async function openMovieDetails(movieId) {
   detailDialog.showModal();
   lucide.createIcons();
 
-  // Asynchronously fetch watch providers (with details)
+  // Asynchronously fetch watch providers and keywords (with details)
   try {
-    const details = await fetchFromTMDb(`${currentMode}/${movieId}`, { append_to_response: 'watch/providers' });
+    const details = await fetchFromTMDb(`${currentMode}/${movieId}`, { append_to_response: 'watch/providers,keywords' });
     
     // Update additional fields from detailed fetch
     if (details.runtime) {
@@ -1615,10 +1687,30 @@ async function openMovieDetails(movieId) {
       }
     }
     
-    if (genresContainer && details.genres && details.genres.length > 0) {
-      genresContainer.innerHTML = details.genres
-        .map(g => `<span class="genre-pill">${g.name}</span>`)
-        .join('');
+    if (genresContainer) {
+      let allTags = [];
+      if (details.genres) {
+        allTags = [...details.genres.map(g => g.name)];
+      }
+      
+      if (details.keywords) {
+        const kwList = details.keywords.keywords || details.keywords.results || [];
+        const kwNames = kwList.slice(0, 8).map(k => k.name);
+        allTags = [...allTags, ...kwNames];
+      }
+
+      // Deduplicate and capitalize
+      allTags = [...new Set(allTags)].map(tag => {
+        return tag.replace(/\b\w/g, l => l.toUpperCase());
+      });
+
+      if (allTags.length > 0) {
+        genresContainer.innerHTML = allTags
+          .map(name => `<span class="genre-pill">${name}</span>`)
+          .join('');
+      } else {
+        genresContainer.innerHTML = '<span class="text-muted text-sm">No tags listed</span>';
+      }
     }
 
     await renderWatchProviders(details);
@@ -2200,14 +2292,20 @@ function setupEventListeners() {
     actressSuggestions.innerHTML = '';
     actressSuggestions.classList.add('hidden');
 
+
+
     // Reset other fields
     titleInput.value = '';
     updateInlineClearButton(titleInput, titleClearBtn);
+    if (keywordInput) {
+      keywordInput.value = '';
+      updateInlineClearButton(keywordInput, keywordClearBtn);
+    }
     const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
     if (activeYearEl) activeYearEl.value = '';
     languageSelect.value = '';
     modeCriteria[currentMode] = {
-      title: '', year: '', language: '', genre: '', excludedGenres: [],
+      title: '', keyword: '', year: '', language: '', genre: '', excludedGenres: [],
       actorId: null, actorName: '', actorImg: '',
       actressId: null, actressName: '', actressImg: ''
     };
@@ -2294,6 +2392,18 @@ function setupEventListeners() {
     }, 400));
   }
 
+  if (keywordInput) {
+    keywordInput.addEventListener('input', () => {
+      updateInlineClearButton(keywordInput, keywordClearBtn);
+    });
+
+    keywordInput.addEventListener('input', debounce(() => {
+      updateHasValue();
+      currentPage = 1;
+      discoverMovies();
+    }, 400));
+  }
+
   // Automatic filtering when changing the release year
   const activeYearEl = document.getElementById('year-select') || document.getElementById('year-input');
   if (activeYearEl) {
@@ -2307,6 +2417,41 @@ function setupEventListeners() {
   // Automatic filtering when changing original language selection
   if (languageSelect) {
     languageSelect.addEventListener('change', () => {
+      updateHasValue();
+      currentPage = 1;
+      discoverMovies();
+    });
+  }
+
+  // Clear button handlers for selects
+  const yearClearBtn = document.getElementById('year-clear-btn');
+  const languageClearBtn = document.getElementById('language-clear-btn');
+  const genreClearBtn = document.getElementById('genre-clear-btn');
+
+  if (yearClearBtn && activeYearEl) {
+    yearClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      activeYearEl.value = '';
+      updateHasValue();
+      currentPage = 1;
+      discoverMovies();
+    });
+  }
+
+  if (languageClearBtn && languageSelect) {
+    languageClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      languageSelect.value = '';
+      updateHasValue();
+      currentPage = 1;
+      discoverMovies();
+    });
+  }
+
+  if (genreClearBtn && genreSelect) {
+    genreClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      genreSelect.value = '';
       updateHasValue();
       currentPage = 1;
       discoverMovies();
@@ -2461,6 +2606,17 @@ document.querySelectorAll('#mode-toggle .segmented-option').forEach(btn => {
       currentPage = 1;
       discoverMovies();
       titleInput.focus();
+    });
+  }
+
+  if (keywordClearBtn) {
+    keywordClearBtn.addEventListener('click', () => {
+      keywordInput.value = '';
+      updateInlineClearButton(keywordInput, keywordClearBtn);
+      updateHasValue();
+      currentPage = 1;
+      discoverMovies();
+      keywordInput.focus();
     });
   }
 

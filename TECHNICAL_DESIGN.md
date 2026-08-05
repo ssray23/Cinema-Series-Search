@@ -104,6 +104,19 @@ params = {
 - Cannot combine title keyword + cast filters (TMDb discover has no `query` parameter)
 - When user types a title WITH actor selected, the title search is silently dropped and we filter client-side (see comment at line 592)
 
+### Pipeline C: Semantic Keyword Fallback Pipeline
+**Triggered when:** User types a keyword that exactly matches one of our 500+ hardcoded semantic triggers (e.g., `zombie`, `funny`, `mindfuck`), or its spelling variant.
+
+**Flow:**
+1. Keyword is normalized for UK/US spellings (e.g. `humour` -> `humor`).
+2. Keyword is mapped to a primary TMDb Genre ID (e.g. `zombie` -> `27,28`).
+3. If `currentMode === 'tv'`, Movie genre IDs are translated to TV equivalent IDs (e.g. `28` -> `10759`).
+4. A `/discover` call is made utilizing `with_genres` instead of `/search`.
+
+**Pros:**
+- Makes the app highly forgiving for adjectives and slang searches.
+- Greatly increases relevancy over pure full-text search.
+
 ---
 
 ## Smart Fetch Strategy

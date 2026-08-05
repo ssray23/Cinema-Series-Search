@@ -12,7 +12,8 @@ A sleek, premium movie and TV series discovery web app powered by [The Movie Dat
 - **Dynamic UI Adapting** — Toggle between modes to automatically shift the interface background gradients (soft pastel CMYK red for Cinema mode, teal-ish blue for Series mode), control button outlines, genres, search placeholders, and TMDB discovery queries.
 
 ### 🔍 Smart Search
-- **Title / Keyword** — Type any title or keyword and results update automatically as you type (debounced to avoid API spam).
+- **Title Search** — Type any title and results update automatically as you type (debounced to avoid API spam).
+- **Semantic Keyword Search** — Type descriptive adjectives or slang (e.g., `mindfuck`, `zombie`, `funny`) and the app intelligently maps them to combinations of TMDb Genre IDs (e.g., Sci-Fi+Thriller+Mystery, Horror+Action, Comedy). It gracefully handles UK/US spelling variants (e.g., `humour` and `humor` yield identical results).
 - **Actor & Actress** — Real-time autocomplete with profile photo suggestions. Select both to find their collaborative titles together.
 - **Release Year / First Air Date** — Filter by a specific year. The up/down spinner starts from the current year for convenience while still allowing navigation to past years.
 - **Original Language** — Filter by the title's original production language (Hindi, Bengali, English, French, Japanese, etc.).

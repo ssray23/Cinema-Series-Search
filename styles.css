@@ -588,7 +588,9 @@ body.light-theme .ott-new-input {
 }
 
 .input-clear-btn i,
-.input-clear-btn svg {
+.input-clear-btn svg,
+.select-clear-btn i,
+.select-clear-btn svg {
   position: static;
   transform: none;
   width: 14px;
@@ -604,6 +606,38 @@ body.light-theme .input-clear-btn:hover {
 .select-wrapper {
   position: relative;
 }
+
+.select-clear-btn {
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.select-clear-btn:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+body.dark-theme .select-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.select-clear-btn.hidden {
+  display: none;
+}
+
 
 .select-wrapper::after {
   content: '';

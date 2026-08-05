@@ -55,4 +55,17 @@ test('FEATURE: Datamuse API Fallback Integration', async (t) => {
     const mappedGenreId = await core.getDatamuseGenreMapping('unknown', 'movie');
     assert.strictEqual(mappedGenreId, null, 'Should return null if no dictionary match');
   });
+
+  // Test 4: Multi-word queries should return null immediately without fetching
+  await t.test('Ignores multi-word queries', async () => {
+    let fetchCalled = false;
+    global.fetch = async () => {
+      fetchCalled = true;
+      return { ok: true, json: async () => [] };
+    };
+
+    const mappedGenreId = await core.getDatamuseGenreMapping('shot in italy', 'movie');
+    assert.strictEqual(mappedGenreId, null, 'Should return null for multi-word phrases');
+    assert.strictEqual(fetchCalled, false, 'Fetch should not be called for multi-word phrases');
+  });
 });

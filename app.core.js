@@ -454,6 +454,14 @@
      */
     getDatamuseGenreMapping: async function(keywordQuery, currentMode) {
       if (!keywordQuery) return null;
+      
+      // Restrict Datamuse fallback to single-word queries.
+      // Multi-word phrases (e.g. "shot in italy") yield erratic synonyms (like "chase") 
+      // which aggressively hijack the search. These should fall through to native TMDb keyword search.
+      if (keywordQuery.trim().split(/\s+/).length > 1) {
+        return null;
+      }
+
       try {
         // Run network fetch to Datamuse
         const dmRes = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(keywordQuery)}&max=10`);

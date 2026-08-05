@@ -435,7 +435,32 @@
     parseAiJsonCotResponse,
     generateYearOptions,
     getSpellingVariants,
-    getSemanticGenreMapping
+    getSemanticGenreMapping,
+    
+    /**
+     * Asynchronously query Datamuse API to find related words for a given keyword,
+     * and check if any of those words map to a genre in our semantic dictionary.
+     */
+    getDatamuseGenreMapping: async function(keywordQuery, currentMode) {
+      if (!keywordQuery) return null;
+      try {
+        // Run network fetch to Datamuse
+        const dmRes = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(keywordQuery)}&max=10`);
+        if (dmRes.ok) {
+          const dmWords = await dmRes.json();
+          // Evaluate returned words against semantic dictionary
+          for (const wordObj of dmWords) {
+            const mapped = getSemanticGenreMapping(wordObj.word, currentMode);
+            if (mapped) {
+              return mapped; // Found our genre mapping!
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Datamuse API error:', e);
+      }
+      return null;
+    }
   };
 }));
 

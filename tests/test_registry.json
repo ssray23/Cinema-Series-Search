@@ -56,6 +56,10 @@
       {
         "file": "tests/features/test_spelling_variants.test.js",
         "description": "Tests normalization of US and UK spelling variants"
+      },
+      {
+        "file": "tests/features/test_test_datamuse_integration.test.js",
+        "description": "Verify Datamuse API fallback triggers semantic mapping"
       }
     ],
     "bugs": [

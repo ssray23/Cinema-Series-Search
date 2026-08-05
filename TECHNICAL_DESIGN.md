@@ -105,16 +105,17 @@ params = {
 - When user types a title WITH actor selected, the title search is silently dropped and we filter client-side (see comment at line 592)
 
 ### Pipeline C: Semantic Keyword Fallback Pipeline
-**Triggered when:** User types a keyword that exactly matches one of our 500+ hardcoded semantic triggers (e.g., `zombie`, `funny`, `mindfuck`), or its spelling variant.
+**Triggered when:** User types a keyword that exactly matches one of our 500+ hardcoded semantic triggers (e.g., `zombie`, `funny`, `mindfuck`), its spelling variant, OR when an unknown word resolves to a known trigger via the Datamuse API fallback.
 
 **Flow:**
 1. Keyword is normalized for UK/US spellings (e.g. `humour` -> `humor`).
 2. Keyword is mapped to a primary TMDb Genre ID (e.g. `zombie` -> `27,28`).
-3. If `currentMode === 'tv'`, Movie genre IDs are translated to TV equivalent IDs (e.g. `28` -> `10759`).
-4. A `/discover` call is made utilizing `with_genres` instead of `/search`.
+3. If no direct match exists, the app calls `https://api.datamuse.com/words?ml={keyword}` asynchronously. If any returned related word exists in our dictionary, it borrows that genre mapping.
+4. If `currentMode === 'tv'`, Movie genre IDs are translated to TV equivalent IDs (e.g. `28` -> `10759`).
+5. A `/discover` call is made utilizing `with_genres` instead of `/search`.
 
 **Pros:**
-- Makes the app highly forgiving for adjectives and slang searches.
+- Makes the app highly forgiving for adjectives and slang searches, effectively expanding our dictionary infinitely through Datamuse.
 - Greatly increases relevancy over pure full-text search.
 
 ---

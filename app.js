@@ -1058,28 +1058,40 @@ async function discoverMovies() {
         let variantQuery = null;
         if (typeof CineSearchCore !== 'undefined' && CineSearchCore.getSpellingVariants) {
           variantQuery = CineSearchCore.getSpellingVariants(keywordQuery);
-        }
-
-        const queriesToRun = variantQuery ? [keywordQuery, variantQuery] : [keywordQuery];
-        
-        let allKeywords = [];
-        for (const q of queriesToRun) {
-          const data = await fetchFromTMDb('search/keyword', { query: q, page: 1 });
-          if (data.results) {
-            allKeywords = allKeywords.concat(data.results.slice(0, 5));
+          if (variantQuery && CineSearchCore.getSemanticGenreMapping) {
+            mappedGenreId = CineSearchCore.getSemanticGenreMapping(variantQuery, currentMode);
           }
         }
-        
-        if (allKeywords.length > 0) {
-          // Deduplicate by ID and combine
-          const uniqueKeywords = Array.from(new Map(allKeywords.map(item => [item.id, item])).values());
-          activeKeywordId = uniqueKeywords.map(k => k.id).join('|');
-        } else {
-          hideLoader();
-          renderResults([]);
-          const countText = document.getElementById('results-count-text');
-          if (countText) countText.innerHTML = `No keywords found for "<b>${keywordQuery}</b>"`;
-          return;
+
+        if (!mappedGenreId) {
+          // Datamuse Fallback for Semantic Genre Mapping
+          if (typeof CineSearchCore !== 'undefined' && CineSearchCore.getDatamuseGenreMapping) {
+            mappedGenreId = await CineSearchCore.getDatamuseGenreMapping(keywordQuery, currentMode);
+          }
+        }
+
+        if (!mappedGenreId) {
+          const queriesToRun = variantQuery ? [keywordQuery, variantQuery] : [keywordQuery];
+          
+          let allKeywords = [];
+          for (const q of queriesToRun) {
+            const data = await fetchFromTMDb('search/keyword', { query: q, page: 1 });
+            if (data.results) {
+              allKeywords = allKeywords.concat(data.results.slice(0, 5));
+            }
+          }
+          
+          if (allKeywords.length > 0) {
+            // Deduplicate by ID and combine
+            const uniqueKeywords = Array.from(new Map(allKeywords.map(item => [item.id, item])).values());
+            activeKeywordId = uniqueKeywords.map(k => k.id).join('|');
+          } else {
+            hideLoader();
+            renderResults([]);
+            const countText = document.getElementById('results-count-text');
+            if (countText) countText.innerHTML = `No keywords found for "<b>${keywordQuery}</b>"`;
+            return;
+          }
         }
       } catch (e) {
         console.error('Error fetching keyword:', e);

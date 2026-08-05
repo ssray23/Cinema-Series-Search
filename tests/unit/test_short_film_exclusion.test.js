@@ -23,6 +23,14 @@ test('isLikelyTvSeriesOrSpecial: Stand-up & TV special keywords in title & overv
   assert.equal(core.isLikelyTvSeriesOrSpecial(standupOverview), true);
 });
 
+test('isLikelyTvSeriesOrSpecial: Making of and Short film keywords', () => {
+  const makingOfTitle = { title: 'The Talented Mr. Ripley: Making the Soundtrack', genre_ids: [99] };
+  assert.equal(core.isLikelyTvSeriesOrSpecial(makingOfTitle), true);
+
+  const shortFilmOverview = { title: 'Some Indie Movie', overview: 'This short film explores...', genre_ids: [18] };
+  assert.equal(core.isLikelyTvSeriesOrSpecial(shortFilmOverview), true);
+});
+
 test('isLikelyTvSeriesOrSpecial: S01E01 pattern in title', () => {
   const episode = { title: 'Awesome Show S01E05', overview: 'Episode 5 description' };
   assert.equal(core.isLikelyTvSeriesOrSpecial(episode), true);

@@ -673,92 +673,9 @@ async function searchPeople(query, genderFilter) {
  * Check if a movie result is likely a TV series, season, episode, or unscripted special.
  */
 function isLikelyTvSeriesOrSpecial(movie) {
-  const title = (movie.title || '').toLowerCase();
-  const overview = (movie.overview || '').toLowerCase();
-  
-  // 1. Filter out TMDb TV Movie genre (10770)
-  if (movie.genre_ids && movie.genre_ids.includes(10770)) {
-    return true;
+  if (typeof CineSearchCore !== 'undefined' && CineSearchCore.isLikelyTvSeriesOrSpecial) {
+    return CineSearchCore.isLikelyTvSeriesOrSpecial(movie);
   }
-  
-  // 2. Filter out TV episode / season / series formats in the title
-  const episodePattern = /\b(episode|season|tv series|tv show|television series|web series|miniseries|mini-series|talk show|game show|reality show|stand-up|stand up|comedy special|comedy show)\b/i;
-  if (episodePattern.test(title)) {
-    return true;
-  }
-  
-  // 2b. Filter out S01E01-style season/episode numbering in the title
-  if (/\bS\d{1,2}\s*E\d{1,2}\b/i.test(title)) {
-    return true;
-  }
-  
-  // 3. Filter out items whose overview contains TV show / live show / stand-up special indicators
-  const tvKeywords = [
-    'television series',
-    'tv series',
-    'tv show',
-    'web series',
-    'miniseries',
-    'anthology series',
-    'talk show',
-    'reality show',
-    'game show',
-    'daily soap',
-    'soap opera',
-    'based on the series',
-    'based on the tv show',
-    'improvised comedy special',
-    'live comedy special',
-    'stand-up comedy',
-    'stand up comedy',
-    'stand-up special',
-    'stand up special',
-    'comedy special',
-    'stand-up comedian',
-    'stand up comedian',
-    'stand-up comic',
-    'standup comedy',
-    // Catches overviews like "In this special, [person] shares..."
-    'in this special',
-    'in his special',
-    'in her special',
-    'his comedy special',
-    'her comedy special',
-    'this comedy special',
-    'comedy concert',
-    'comedy tour',
-    'unscripted live',
-    'ucb theatre',
-    'upright citizens brigade',
-    'unscripted, live'
-  ];
-  
-  if (tvKeywords.some(keyword => overview.includes(keyword))) {
-    return true;
-  }
-  
-  // 4. Specific titles or keywords in title
-  if (title === 'house of lies live' || (title.includes('house of lies') && title.includes('live'))) {
-    return true;
-  }
-
-  // 4b. "PersonName: Title" with NO genre tags = almost certainly a performance special,
-  // not a real film. Legitimate movies with colons (e.g. "Mission: Impossible") always
-  // have genres set. TMDb returns genre_ids:[] for event-style specials like
-  // "Munawar Faruqui: Dhandho".
-  const hasColon = title.includes(':');
-  const hasNoGenres = !movie.genre_ids || movie.genre_ids.length === 0;
-  if (hasColon && hasNoGenres) {
-    return true;
-  }
-
-  // 5. Filter by runtime — anything under 40 minutes is a short film, not a feature.
-  // TMDb sometimes misclassifies shorts (e.g. 8-min or 14-min films) as "Feature Film",
-  // so this acts as a hard runtime gate independent of genre tags.
-  if (typeof movie.runtime === 'number' && movie.runtime > 0 && movie.runtime < 40) {
-    return true;
-  }
-  
   return false;
 }
 

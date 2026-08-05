@@ -26,7 +26,7 @@
     }
 
     // 2. Filter out TV episode / season / series formats in the title
-    const episodePattern = /\b(episode|season|tv series|tv show|television series|web series|miniseries|mini-series|talk show|game show|reality show|stand-up|stand up|comedy special|comedy show)\b/i;
+    const episodePattern = /\b(episode|season|tv series|tv show|television series|web series|miniseries|mini-series|talk show|game show|reality show|stand-up|stand up|comedy special|comedy show|making of|making the|behind the scenes|short film)\b/i;
     if (episodePattern.test(title)) {
       return true;
     }
@@ -73,7 +73,12 @@
       'unscripted live',
       'ucb theatre',
       'upright citizens brigade',
-      'unscripted, live'
+      'unscripted, live',
+      'making of',
+      'making the',
+      'behind the scenes',
+      'short film',
+      'documentary short'
     ];
 
     if (tvKeywords.some(keyword => overview.includes(keyword))) {

@@ -828,6 +828,16 @@ body.light-theme .header-control:hover {
   gap: 0.85rem;
 }
 
+/* Color typed text in search inputs with the current accent color */
+.search-panel input[type="text"] {
+  color: var(--accent-primary) !important;
+}
+
+/* Ensure placeholders remain muted gray */
+.search-panel input[type="text"]::placeholder {
+  color: var(--text-muted) !important;
+}
+
 .form-row {
   display: flex;
   gap: 1.25rem;

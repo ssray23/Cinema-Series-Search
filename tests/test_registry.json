@@ -60,6 +60,10 @@
       {
         "file": "tests/features/test_test_datamuse_integration.test.js",
         "description": "Verify Datamuse API fallback triggers semantic mapping"
+      },
+      {
+        "file": "tests/features/test_eroticmv_fallback.test.js",
+        "description": "Verify EroticMV pill is added for adult titles"
       }
     ],
     "bugs": [

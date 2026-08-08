@@ -1864,6 +1864,35 @@ async function renderWatchProviders(details) {
   const movieYear = mDate ? mDate.split('-')[0] : '';
   const langSuffix = getLanguageSuffix(details.original_language);
 
+  // Erotica check for EroticMV
+  const isAdult = details.adult === true;
+  const kwList = details.keywords && (details.keywords.keywords || details.keywords.results) ? (details.keywords.keywords || details.keywords.results) : [];
+  const isErotica = isAdult || kwList.some(k => {
+    const name = k.name.toLowerCase();
+    return name.includes('erotica') || name.includes('erotic') || name === 'adult';
+  });
+
+  if (isErotica) {
+    if (container.innerHTML.includes('Not streaming')) {
+      container.innerHTML = '';
+    }
+    const pill = document.createElement('a');
+    pill.className = 'provider-pill';
+    pill.href = `https://eroticmv.com/?s=${encodeURIComponent(movieTitle)}`;
+    pill.target = '_blank';
+    pill.rel = 'noopener noreferrer';
+    pill.title = `Watch "${movieTitle}" on EroticMV`;
+    
+    pill.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 13 13" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+        <rect width="13" height="13" rx="3" fill="#e91e63" />
+        <text x="6.5" y="9" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="5.5" font-weight="800" fill="white" text-anchor="middle" letter-spacing="-0.2">EMV</text>
+      </svg>
+      <span>EroticMV (Global)</span>
+    `;
+    container.appendChild(pill);
+  }
+
   // Render verified AI prediction pill if available
   if (container.dataset.aiPrediction) {
     const aiPredictionName = container.dataset.aiPrediction;

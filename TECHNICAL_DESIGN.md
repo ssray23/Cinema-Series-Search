@@ -242,6 +242,11 @@ for (const company of movieData.production_companies) {
 
 **Logic:** Check if the movie's `homepage` URL contains the domain name or alias of any known OTT platform. Streaming exclusives often use their direct viewing URL as the official homepage (e.g., `www.zee5.com/movies/...`).
 
+### Special Case: Erotica Direct Match
+**When:** The title has `adult: true` OR contains keywords such as `erotica`, `erotic`, or `adult`.
+
+**Logic:** Dynamically injects a verified **EroticMV** streaming pill containing a direct search URL to `eroticmv.com` for that title, bypassing expensive AI predictions.
+
 ---
 
 ## Ranking Without Exclusion

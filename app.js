@@ -1888,7 +1888,7 @@ async function renderWatchProviders(details) {
         <rect width="13" height="13" rx="3" fill="#e91e63" />
         <text x="6.5" y="9" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="5.5" font-weight="800" fill="white" text-anchor="middle" letter-spacing="-0.2">EMV</text>
       </svg>
-      <span>EroticMV (Global)</span>
+      <span>Search on EroticMV</span>
     `;
     container.appendChild(pill);
   }

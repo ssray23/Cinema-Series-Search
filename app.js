@@ -1881,7 +1881,7 @@ async function renderWatchProviders(details) {
     pill.href = `https://eroticmv.com/?s=${encodeURIComponent(movieTitle)}`;
     pill.target = '_blank';
     pill.rel = 'noopener noreferrer';
-    pill.title = `Watch "${movieTitle}" on EroticMV`;
+    pill.title = `Search for "${movieTitle}" on EroticMV`;
     
     pill.innerHTML = `
       <svg width="13" height="13" viewBox="0 0 13 13" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
